@@ -1,0 +1,31 @@
+{
+  "entities": {
+    "bookmark": {
+      "title": "Bookmark",
+      "description": "A saved Quran verse or Hadith guidance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier" },
+        "userId": { "type": "string", "description": "The user who saved this" },
+        "type": { "type": "string", "enum": ["Quran", "Hadith"], "description": "Source type" },
+        "arabic": { "type": "string" },
+        "english": { "type": "string" },
+        "urdu": { "type": "string" },
+        "source": { "type": "string", "description": "Reference" },
+        "timestamp": { "type": "number" },
+        "notes": { "type": "string", "description": "Personal reflection" },
+        "explanation": { "type": "object" },
+        "lifeApplication": { "type": "object" },
+        "reflection": { "type": "object" },
+        "actionSteps": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "userId", "type", "arabic", "english", "urdu", "source", "timestamp"]
+    }
+  },
+  "firestore": {
+    "bookmarks/{bookmarkId}": {
+      "schema": "bookmark",
+      "description": "Collection of saved guidance items per user."
+    }
+  }
+}
