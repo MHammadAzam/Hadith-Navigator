@@ -1,6 +1,6 @@
 {
-  "name": "Hadith Navigator AI",
-  "description": "An Islamic knowledge assistant providing authentic Hadith context, translations, and practical life guidance.",
+  "name": "Sihah-e-Sitta Hadith App",
+  "description": "A modern, production-grade Hadith application featuring the six authentic books with Arabic text, translations (Urdu/English), and AI-powered explanations and semantic search.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

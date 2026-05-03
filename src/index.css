@@ -1,26 +1,68 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap');
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Cormorant Garamond", serif;
-  --font-arabic: "Amiri", serif;
-
-  --color-islamic-green: #2D5A27;
-  --color-islamic-gold: #C5A059;
-  --color-parchment: #FDFBF7;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --font-arabic: "Noto Naskh Arabic", "Amiri", serif;
+  --font-urdu: "Amiri", serif;
+  
+  --color-islamic-green: #065f46;
+  --color-islamic-gold: #b45309;
+  --color-parchment: #fcfaf2;
 }
 
 @layer base {
-  body {
-    @apply bg-parchment text-slate-900 font-sans transition-colors duration-300;
+  .arabic-text {
+    @apply font-arabic leading-[1.8] text-slate-900 dark:text-slate-50;
+    font-size: clamp(20px, 5vw, 24px);
+    direction: rtl;
   }
-  .dark body {
-    @apply bg-slate-950 text-slate-100;
+
+  .translation-text {
+    @apply text-slate-600 dark:text-slate-300 font-serif leading-relaxed;
+    font-size: clamp(14px, 4vw, 16px);
+  }
+
+  .reference-text {
+    @apply text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest;
+    font-size: 13px;
+  }
+  .urdu-text {
+    @apply font-urdu leading-[1.8] text-slate-800 dark:text-slate-200;
+    font-size: clamp(20px, 4vw, 22px);
+    direction: rtl;
   }
 }
 
-.arabic-text {
-  direction: rtl;
-  font-family: var(--font-arabic);
+body {
+  @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+}
+
+.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full border-4 border-transparent bg-clip-padding hover:bg-slate-300 dark:hover:bg-slate-700;
+}
+
+/* Hide scrollbar for clean overlays */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

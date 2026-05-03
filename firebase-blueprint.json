@@ -1,31 +1,88 @@
 {
   "entities": {
-    "bookmark": {
-      "title": "Bookmark",
-      "description": "A saved Quran verse or Hadith guidance.",
+    "Book": {
+      "title": "Book",
+      "description": "One of the Sihah-e-Sitta Hadith books",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier" },
-        "userId": { "type": "string", "description": "The user who saved this" },
-        "type": { "type": "string", "enum": ["Quran", "Hadith"], "description": "Source type" },
-        "arabic": { "type": "string" },
-        "english": { "type": "string" },
-        "urdu": { "type": "string" },
-        "source": { "type": "string", "description": "Reference" },
-        "timestamp": { "type": "number" },
-        "notes": { "type": "string", "description": "Personal reflection" },
-        "explanation": { "type": "object" },
-        "lifeApplication": { "type": "object" },
-        "reflection": { "type": "object" },
-        "actionSteps": { "type": "array", "items": { "type": "string" } }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameUrdu": { "type": "string" },
+        "nameArabic": { "type": "string" },
+        "description": { "type": "string" },
+        "hadithCount": { "type": "number" },
+        "chapterCount": { "type": "number" },
+        "color": { "type": "string", "description": "Primary theme color for the book" }
       },
-      "required": ["id", "userId", "type", "arabic", "english", "urdu", "source", "timestamp"]
+      "required": ["id", "name"]
+    },
+    "Chapter": {
+      "title": "Chapter",
+      "description": "A Kitab (Book/Chapter) within a Hadith collection",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookId": { "type": "string" },
+        "number": { "type": "number" },
+        "name": { "type": "string" },
+        "nameArabic": { "type": "string" },
+        "nameUrdu": { "type": "string" },
+        "hadithRange": { "type": "string" }
+      },
+      "required": ["id", "bookId", "name"]
+    },
+    "Hadith": {
+      "title": "Hadith",
+      "description": "A single prophetic tradition",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "bookId": { "type": "string" },
+        "chapterId": { "type": "string" },
+        "hadithNumber": { "type": "string" },
+        "arabicText": { "type": "string" },
+        "englishTranslation": { "type": "string" },
+        "urduTranslation": { "type": "string" },
+        "reference": { "type": "string" },
+        "tags": { 
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "authenticity": { "type": "string", "enum": ["Sahih", "Hasan", "Da'if", "Maudu"] }
+      },
+      "required": ["id", "bookId", "arabicText"]
+    },
+    "Bookmark": {
+      "title": "Bookmark",
+      "description": "A user's saved hadith",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "hadithId": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" },
+        "cachedHadith": { "type": "object", "description": "Optional snapshot of the hadith for offline access" }
+      },
+      "required": ["id", "hadithId", "userId"]
     }
   },
   "firestore": {
-    "bookmarks/{bookmarkId}": {
-      "schema": "bookmark",
-      "description": "Collection of saved guidance items per user."
+    "/books/{bookId}": {
+      "schema": "Book",
+      "description": "Metadata for the 6 primary hadith books"
+    },
+    "/books/{bookId}/chapters/{chapterId}": {
+      "schema": "Chapter",
+      "description": "Chapters (Kitabs) for a specific book"
+    },
+    "/hadiths/{hadithId}": {
+      "schema": "Hadith",
+      "description": "Individual Hadith records"
+    },
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": "Bookmark",
+      "description": "User specific bookmarks"
     }
   }
 }

@@ -31,47 +31,45 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // Bookmark validation
+    // Validations
     function isValidBookmark(data) {
-      return data.keys().hasAll(['id', 'userId', 'type', 'arabic', 'english', 'urdu', 'source', 'timestamp'])
-        && data.id is string && data.id.size() <= 256
+      return data.keys().hasAll(['id', 'hadithId', 'userId', 'createdAt'])
+        && data.id is string && data.id.size() <= 128
         && data.userId == request.auth.uid
-        && data.type in ['Quran', 'Hadith']
-        && data.arabic is string && data.arabic.size() <= 5000
-        && data.english is string && data.english.size() <= 5000
-        && data.urdu is string && data.urdu.size() <= 5000
-        && data.source is string && data.source.size() <= 512
-        && (data.timestamp is timestamp || data.timestamp is int || data.timestamp is float)
-        // Optional fields
-        && (!data.keys().contains('notes') || (data.notes is string && data.notes.size() <= 2000))
-        && (!data.keys().contains('explanation') || data.explanation is map)
-        && (!data.keys().contains('lifeApplication') || data.lifeApplication is map)
-        && (!data.keys().contains('reflection') || data.reflection is map)
-        && (!data.keys().contains('actionSteps') || data.actionSteps is list);
+        && data.hadithId is string
+        && (data.createdAt is timestamp || data.createdAt is string)
+        && (!data.keys().contains('notes') || (data.notes is string && data.notes.size() <= 2000));
     }
 
-    match /bookmarks/{bookmarkId} {
-      allow get: if isVerified() && isOwner(existing().userId);
-      allow list: if isVerified() && resource.data.userId == request.auth.uid;
+    // Collection: Books (Sihah-e-Sitta)
+    match /books/{bookId} {
+      allow read: if true; // Publicly readable
+      allow write: if false; // System only
       
-      allow create: if isVerified() 
-        && isValidId(bookmarkId)
-        && incoming().id == bookmarkId
-        && isValidBookmark(incoming())
-        && (incoming().timestamp == request.time || incoming().timestamp is int); 
+      match /chapters/{chapterId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
 
-      allow update: if isVerified()
-        && isValidBookmark(incoming())
-        && incoming().userId == existing().userId
-        && incoming().id == existing().id // Immutable fields
-        && (
-          // Allow specific updates OR metadata re-sync
-          incoming().diff(existing()).affectedKeys().hasOnly(['notes'])
-          || 
-          incoming().diff(existing()).affectedKeys().hasAny(['explanation', 'lifeApplication', 'reflection', 'actionSteps', 'timestamp'])
-        );
+    // Collection: Hadiths
+    match /hadiths/{hadithId} {
+      allow read: if true;
+      allow write: if false;
+    }
 
-      allow delete: if isVerified() && isOwner(existing().userId);
+    // Collection: User Bookmarks (Nested under users)
+    match /users/{userId}/bookmarks/{bookmarkId} {
+      allow read, write: if isOwner(userId);
+      
+      // Additional validation on create
+      allow create: if isOwner(userId) && isValidId(bookmarkId) && isValidBookmark(incoming());
+    }
+    
+    // Fallback for flat bookmarks if used
+    match /bookmarks/{bookmarkId} {
+      allow read: if isVerified() && resource.data.userId == request.auth.uid;
+      allow write: if isVerified() && (incoming().userId == request.auth.uid || existing().userId == request.auth.uid);
     }
   }
 }
