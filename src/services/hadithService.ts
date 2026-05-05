@@ -68,7 +68,7 @@ export async function getGuidance(
       : `User Query: ${query}\nUser Preferred Language: ${language}${filterText}`;
 
     const result = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash",
       contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,

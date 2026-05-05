@@ -14,7 +14,7 @@ import {
   where,
   orderBy
 } from 'firebase/firestore';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { auth, db } from './lib/firebase';
 import { 
   AppView, 
@@ -42,6 +42,7 @@ import { HadithDetail } from './components/HadithDetail';
 import { VerseDetail } from './components/VerseDetail';
 import { BookmarkList } from './components/BookmarkList';
 import { SettingsOverlay } from './components/SettingsOverlay';
+import { MoodSelector } from './components/MoodSelector';
 
 // Constants
 import { DAILY_VERSES } from './data/dailyVerses';
@@ -50,9 +51,11 @@ import { DailyAyahCard } from './components/DailyAyahCard';
 const THEME_STORAGE_KEY = 'hadith_app_theme';
 const SETTINGS_STORAGE_KEY = 'hadith_app_settings';
 const DAILY_REFLECTION_STORAGE_PREFIX = 'daily_reflection_';
+const STREAK_STORAGE_KEY = 'hadith_app_streak';
+const LAST_ACTIVE_DATE_KEY = 'hadith_app_last_active';
 
 export default function App() {
-  const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! }), []);
+  const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
   
   const [state, setState] = useState<AppState>({
     view: 'home',
@@ -63,6 +66,9 @@ export default function App() {
   });
 
   const [bookmarks, setBookmarks] = useState<SavedItem[]>([]);
+  const [streak, setStreak] = useState<number>(() => {
+    return parseInt(localStorage.getItem(STREAK_STORAGE_KEY) || '0', 10);
+  });
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isExplaining, setIsExplaining] = useState(false);
@@ -71,6 +77,7 @@ export default function App() {
   const [similarItems, setSimilarItems] = useState<SimilarItem[]>([]);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dailyReflection, setDailyReflection] = useState<string | undefined>();
 
@@ -86,6 +93,37 @@ export default function App() {
     }
     const index = Math.abs(hash) % DAILY_VERSES.length;
     return DAILY_VERSES[index];
+  }, []);
+
+  // Streak Logic
+  useEffect(() => {
+    const today = new Date();
+    const todayDateStr = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+    const lastActiveDate = localStorage.getItem(LAST_ACTIVE_DATE_KEY);
+
+    if (lastActiveDate === todayDateStr) return;
+
+    if (lastActiveDate) {
+      const lastDate = new Date(lastActiveDate);
+      const diffTime = Math.abs(today.getTime() - lastDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        setStreak(prev => {
+          const newStreak = prev + 1;
+          localStorage.setItem(STREAK_STORAGE_KEY, newStreak.toString());
+          return newStreak;
+        });
+      } else if (diffDays > 1) {
+        setStreak(1);
+        localStorage.setItem(STREAK_STORAGE_KEY, '1');
+      }
+    } else {
+      setStreak(1);
+      localStorage.setItem(STREAK_STORAGE_KEY, '1');
+    }
+
+    localStorage.setItem(LAST_ACTIVE_DATE_KEY, todayDateStr);
   }, []);
 
   // AI Reflection for Daily Ayah
@@ -111,7 +149,7 @@ export default function App() {
         `;
 
         const response = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
+          model: "gemini-1.5-flash",
           contents: prompt
         });
         
@@ -204,34 +242,29 @@ export default function App() {
     setIsExplaining(true);
     const isHadith = 'hadithNumber' in item;
     try {
-      const prompt = `
-        As an expert Islamic scholar, provide a simple, clean, and educational explanation for the following ${isHadith ? 'Hadith' : 'Qur\'an Verse'}:
-        
-        Arabic: ${item.arabicText}
-        English: ${item.englishTranslation}
-        Urdu: ${item.urduTranslation}
-        Reference: ${item.reference}
-        
-        Please provide the response in a structured JSON format with the following keys:
-        - generalMeaning: A simple 2-3 sentence explanation.
-        - context: Historical context if available, or theoretical context.
-        - lessons: An array of 3-4 key practical lessons/takeaways.
-        - lifeApplication: How to apply this in modern daily life.
-        
-        Maintain a respectful and academic yet accessible tone. 
-        Add a disclaimer: "This AI-generated explanation is for educational purposes."
-      `;
+      const prompt = `Explain simply and inspiringly: "${item.englishTranslation}" (Ref: ${item.reference}). Provide context, lessons, and life application.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: prompt,
-        config: {
-          responseMimeType: "application/json"
+        config: { 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              generalMeaning: { type: Type.STRING },
+              context: { type: Type.STRING },
+              lessons: { type: Type.ARRAY, items: { type: Type.STRING } },
+              lifeApplication: { type: Type.STRING },
+              disclaimer: { type: Type.STRING }
+            },
+            required: ["generalMeaning", "context", "lessons", "lifeApplication", "disclaimer"]
+          }
         }
       });
       
-      const data = JSON.parse(response.text.trim());
-      setCurrentExplanation(data);
+      const explanation = JSON.parse(response.text);
+      setCurrentExplanation(explanation);
     } catch (error) {
       console.error("AI Explanation failed:", error);
     } finally {
@@ -242,36 +275,36 @@ export default function App() {
   const fetchSimilarItems = async (item: Hadith | QuranVerse) => {
     setIsLoadingSimilar(true);
     setSimilarItems([]);
-    const text = item.englishTranslation;
     try {
-      const prompt = `
-        Find 1-2 thematically similar Qur'an Verses and Hadiths from the Sihah-e-Sitta (Bukhari, Muslim, Abu Dawood, Tirmidhi, Nasa'i, Ibn Majah) that relate to this one:
-        
-        Text: "${text}"
-        
-        Provide the response as a JSON array of objects, where each object has:
-        - type: ('hadith' | 'verse')
-        - source: (string, e.g., 'Sahih Muslim', 'Surah Al-Baqarah')
-        - reference: (string, e.g., 'Muslim 123', 'Quran 2:153')
-        - summary: (string, brief 1 sentence)
-        - mainPoint: (string, what's unique or similar here)
-        - arabic: (string, full arabic text)
-        - english: (string, full english translation)
-        - urdu: (string, full urdu translation)
-        - id: (string, unique identifier)
-        
-        Only return the JSON array.
-      `;
+      const prompt = `Find 1-2 similar Qur'an Verses or Hadiths for: "${item.englishTranslation}". Focus on the core theme.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: prompt,
-        config: {
-          responseMimeType: "application/json"
+        config: { 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                source: { type: Type.STRING },
+                reference: { type: Type.STRING },
+                summary: { type: Type.STRING },
+                mainPoint: { type: Type.STRING },
+                arabic: { type: Type.STRING },
+                english: { type: Type.STRING },
+                urdu: { type: Type.STRING },
+                id: { type: Type.STRING }
+              },
+              required: ["type", "source", "reference", "arabic", "english", "urdu", "id"]
+            }
+          }
         }
       });
       
-      const data = JSON.parse(response.text.trim());
+      const data = JSON.parse(response.text);
       setSimilarItems(data);
     } catch (error) {
       console.error("Similar items fetch failed:", error);
@@ -284,56 +317,49 @@ export default function App() {
     setSearchQuery(queryStr);
     navigateTo('searchResult');
     setIsLoadingSearch(true);
+    setSearchError(null);
     try {
-      const prompt = `
-        A user is searching for Islamic knowledge with this query: "${queryStr}".
-        Suggest 4-5 highly relevant results from BOTH the Qur'an and the Sihah-e-Sitta (Hadith).
-        
-        Return as JSON with this structure:
-        {
-          "tags": ["tag1", "tag2"],
-          "results": [
-             {
-               "type": "verse",
-               "id": "v-1",
-               "surahName": "Al-Baqarah",
-               "surahNumber": 2,
-               "ayahNumber": 153,
-               "arabic": "...",
-               "english": "...",
-               "urdu": "...",
-               "reference": "Quran 2:153"
-             },
-             {
-               "type": "hadith",
-               "id": "h-1",
-               "bookId": "bukhari",
-               "bookName": "Sahih al-Bukhari",
-               "chapterName": "Book of Faith",
-               "hadithNumber": "1",
-               "arabic": "...",
-               "english": "...",
-               "urdu": "...",
-               "reference": "Sahih al-Bukhari 1"
-             }
-          ]
-        }
-        
-        Ensure the "english", "urdu", and "arabic" are authentic and match the query's topic.
-      `;
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("Gemini API key is missing. Please check your environment variables.");
+      }
+      const prompt = `Search Qur'an & Sahih Hadiths for: "${queryStr}". Provide 3-5 relevant results (never empty). If the query is an emotion, map it to a positive Islamic concept (e.g., sad -> hope).`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: prompt,
-        config: {
-          responseMimeType: "application/json"
+        config: { 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                id: { type: Type.STRING },
+                reference: { type: Type.STRING },
+                arabic: { type: Type.STRING },
+                english: { type: Type.STRING },
+                urdu: { type: Type.STRING },
+                bookName: { type: Type.STRING },
+                bookId: { type: Type.STRING },
+                surahName: { type: Type.STRING },
+                surahNumber: { type: Type.NUMBER },
+                ayahNumber: { type: Type.NUMBER },
+                hadithNumber: { type: Type.STRING },
+                relevanceScore: { type: Type.NUMBER },
+                isRelated: { type: Type.BOOLEAN }
+              },
+              required: ["type", "id", "reference", "arabic", "english", "urdu"]
+            }
+          }
         }
       });
       
-      const data = JSON.parse(response.text.trim());
-      setSearchResults(data.results || []);
+      const results = JSON.parse(response.text);
+      setSearchResults(results || []);
     } catch (error) {
       console.error("Search failed:", error);
+      setSearchError(error instanceof Error ? error.message : "Search failed. Please try again later.");
     } finally {
       setIsLoadingSearch(false);
     }
@@ -438,6 +464,7 @@ export default function App() {
         onOpenBookmarks={() => setShowBookmarks(true)}
         onSearch={handleSearch}
         onHome={() => navigateTo('home')}
+        streak={streak}
       />
 
       <main className="pb-20">
@@ -453,8 +480,6 @@ export default function App() {
               <SearchHero onSearch={handleSearch} />
 
               <div className="px-4 -mt-10 mb-20 space-y-24">
-                {/* Featured Categories (Optional, keeping silent for now or removing as per request) */}
-                
                 <div className="px-0">
                   <DailyAyahCard 
                     verse={ayahOfTheDay}
@@ -464,6 +489,8 @@ export default function App() {
                     onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
                   />
                 </div>
+
+                <MoodSelector onMoodSelect={handleSearch} />
               </div>
             </motion.section>
           )}
@@ -481,6 +508,8 @@ export default function App() {
                 isLoading={isLoadingSearch}
                 onSelectResult={handleSelectSearchResult}
                 onBack={() => navigateTo('home')}
+                onSearch={handleSearch}
+                error={searchError}
               />
             </motion.section>
           )}

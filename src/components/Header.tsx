@@ -8,7 +8,8 @@ import {
   LogOut,
   User as UserIcon,
   Moon,
-  Sun
+  Sun,
+  Zap
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { auth, signInWithGoogle } from '../lib/firebase';
@@ -22,6 +23,7 @@ interface HeaderProps {
   toggleTheme: () => void;
   onSearch: (query: string) => void;
   onHome: () => void;
+  streak: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -31,7 +33,8 @@ export const Header: React.FC<HeaderProps> = ({
   theme, 
   toggleTheme,
   onSearch,
-  onHome
+  onHome,
+  streak
 }) => {
   const [searchValue, setSearchValue] = React.useState('');
 
@@ -50,8 +53,8 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="w-10 h-10 bg-islamic-green rounded-xl flex items-center justify-center shadow-lg shadow-islamic-green/20">
             <span className="text-white font-serif text-xl font-bold">S</span>
           </div>
-          <h1 className="hidden md:block font-serif text-xl font-bold text-slate-800 dark:text-slate-100">
-            Sihah-e-Sitta
+          <h1 className="hidden md:block font-serif text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">
+            Islamic AI <br/> Guidance
           </h1>
         </div>
 
@@ -71,6 +74,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Actions */}
         <div className="flex items-center gap-1 md:gap-3">
+          {streak > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 rounded-full border border-amber-500/20 mr-2">
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span className="text-xs font-bold leading-none">{streak}</span>
+            </div>
+          )}
           <button 
             onClick={toggleTheme}
             className="p-2 text-slate-500 hover:text-islamic-green hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all"

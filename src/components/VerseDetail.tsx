@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { QuranVerse, AIExplanation, SimilarItem } from '../types';
 import { AudioPlayButton } from './AudioPlayButton';
+import { AudioRecitation } from './AudioRecitation';
 
 interface VerseDetailProps {
   verse: QuranVerse;
@@ -101,7 +102,7 @@ export const VerseDetail: React.FC<VerseDetailProps> = ({
 
         <div className="space-y-16 relative z-10">
           <div className="flex justify-end mb-4">
-            <AudioPlayButton text={verse.arabicText} lang="ar" />
+            <AudioRecitation surahNumber={verse.surahNumber} ayahNumber={verse.ayahNumber} />
           </div>
           <p className="arabic-text mb-12">
             {verse.arabicText}

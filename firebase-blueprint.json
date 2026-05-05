@@ -1,88 +1,64 @@
 {
   "entities": {
-    "Book": {
-      "title": "Book",
-      "description": "One of the Sihah-e-Sitta Hadith books",
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account settings and basic profile info.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "nameUrdu": { "type": "string" },
-        "nameArabic": { "type": "string" },
-        "description": { "type": "string" },
-        "hadithCount": { "type": "number" },
-        "chapterCount": { "type": "number" },
-        "color": { "type": "string", "description": "Primary theme color for the book" }
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "theme": { "type": "string", "enum": ["light", "dark"] },
+        "language": { "type": "string", "enum": ["English", "Urdu", "Arabic"] },
+        "fontSize": { "type": "number" },
+        "streak": { "type": "number" },
+        "lastActive": { "type": "number" },
+        "createdAt": { "type": "number" }
       },
-      "required": ["id", "name"]
-    },
-    "Chapter": {
-      "title": "Chapter",
-      "description": "A Kitab (Book/Chapter) within a Hadith collection",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "bookId": { "type": "string" },
-        "number": { "type": "number" },
-        "name": { "type": "string" },
-        "nameArabic": { "type": "string" },
-        "nameUrdu": { "type": "string" },
-        "hadithRange": { "type": "string" }
-      },
-      "required": ["id", "bookId", "name"]
-    },
-    "Hadith": {
-      "title": "Hadith",
-      "description": "A single prophetic tradition",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "bookId": { "type": "string" },
-        "chapterId": { "type": "string" },
-        "hadithNumber": { "type": "string" },
-        "arabicText": { "type": "string" },
-        "englishTranslation": { "type": "string" },
-        "urduTranslation": { "type": "string" },
-        "reference": { "type": "string" },
-        "tags": { 
-          "type": "array",
-          "items": { "type": "string" }
-        },
-        "authenticity": { "type": "string", "enum": ["Sahih", "Hasan", "Da'if", "Maudu"] }
-      },
-      "required": ["id", "bookId", "arabicText"]
+      "required": ["uid", "email"]
     },
     "Bookmark": {
       "title": "Bookmark",
-      "description": "A user's saved hadith",
+      "description": "A saved Ayah or Hadith.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "hadithId": { "type": "string" },
         "userId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "notes": { "type": "string" },
-        "cachedHadith": { "type": "object", "description": "Optional snapshot of the hadith for offline access" }
+        "itemId": { "type": "string" },
+        "itemType": { "type": "string", "enum": ["hadith", "verse"] },
+        "itemData": { "type": "object" },
+        "savedAt": { "type": "number" },
+        "collectionId": { "type": "string" },
+        "notes": { "type": "string" }
       },
-      "required": ["id", "hadithId", "userId"]
+      "required": ["userId", "itemId", "itemType", "itemData", "savedAt"]
+    },
+    "UserCollection": {
+      "title": "User Collection",
+      "description": "A custom list for organizing bookmarks.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "itemCount": { "type": "number" }
+      },
+      "required": ["userId", "name", "createdAt"]
     }
   },
   "firestore": {
-    "/books/{bookId}": {
-      "schema": "Book",
-      "description": "Metadata for the 6 primary hadith books"
-    },
-    "/books/{bookId}/chapters/{chapterId}": {
-      "schema": "Chapter",
-      "description": "Chapters (Kitabs) for a specific book"
-    },
-    "/hadiths/{hadithId}": {
-      "schema": "Hadith",
-      "description": "Individual Hadith records"
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User settings and profile."
     },
     "/users/{userId}/bookmarks/{bookmarkId}": {
       "schema": "Bookmark",
-      "description": "User specific bookmarks"
+      "description": "User's saved items."
+    },
+    "/users/{userId}/collections/{collectionId}": {
+      "schema": "UserCollection",
+      "description": "User's custom bookmark collections."
     }
   }
 }

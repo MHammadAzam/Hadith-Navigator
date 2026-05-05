@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Sparkles, Save, Share2, Info, Book, Quote, Download } from 'lucide-react';
 import { QuranVerse } from '../types';
 import { toPng } from 'html-to-image';
+import { AudioRecitation } from './AudioRecitation';
 
 interface DailyAyahCardProps {
   verse: QuranVerse;
@@ -89,8 +90,11 @@ export const DailyAyahCard: React.FC<DailyAyahCardProps> = ({
         </div>
 
         {/* The Ayah */}
-        <div className="space-y-8 mb-10 relative z-10 cursor-pointer" onClick={onViewDetail}>
-          <p className="arabic-text text-3xl md:text-5xl leading-[1.8] text-right">
+        <div className="space-y-8 mb-10 relative z-10">
+          <div className="flex justify-end">
+            <AudioRecitation surahNumber={verse.surahNumber} ayahNumber={verse.ayahNumber} />
+          </div>
+          <p className="arabic-text text-3xl md:text-5xl leading-[1.8] text-right cursor-pointer" onClick={onViewDetail}>
             {verse.arabicText}
           </p>
           
