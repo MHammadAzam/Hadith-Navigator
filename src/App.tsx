@@ -149,7 +149,7 @@ export default function App() {
         `;
 
         const response = await ai.models.generateContent({
-          model: "gemini-1.5-flash",
+          model: "gemini-3-flash-preview",
           contents: prompt
         });
         
@@ -245,7 +245,7 @@ export default function App() {
       const prompt = `Explain simply and inspiringly: "${item.englishTranslation}" (Ref: ${item.reference}). Provide context, lessons, and life application.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
@@ -279,7 +279,7 @@ export default function App() {
       const prompt = `Find 1-2 similar Qur'an Verses or Hadiths for: "${item.englishTranslation}". Focus on the core theme.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
@@ -325,7 +325,7 @@ export default function App() {
       const prompt = `Search Qur'an & Sahih Hadiths for: "${queryStr}". Provide 3-5 relevant results (never empty). If the query is an emotion, map it to a positive Islamic concept (e.g., sad -> hope).`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
