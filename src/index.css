@@ -12,33 +12,43 @@
   --color-islamic-green: #065f46;
   --color-islamic-gold: #b45309;
   --color-parchment: #fcfaf2;
+  --color-deep-teal: #022c22;
+
+  --animate-shimmer: shimmer 2.5s infinite;
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
 }
 
 @layer base {
   .arabic-text {
-    @apply font-arabic leading-[1.8] text-slate-900 dark:text-slate-50;
-    font-size: clamp(20px, 5vw, 24px);
+    @apply font-arabic leading-[1.8] text-slate-900 dark:text-slate-100;
+    font-size: clamp(26px, 6vw, 36px);
     direction: rtl;
+    @apply tracking-normal transition-all duration-300;
   }
 
   .translation-text {
     @apply text-slate-600 dark:text-slate-300 font-serif leading-relaxed;
-    font-size: clamp(14px, 4vw, 16px);
+    font-size: clamp(16px, 4vw, 18px);
   }
 
   .reference-text {
-    @apply text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest;
-    font-size: 13px;
+    @apply text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.2em];
+    font-size: 11px;
   }
+  
   .urdu-text {
     @apply font-urdu leading-[1.8] text-slate-800 dark:text-slate-200;
-    font-size: clamp(20px, 4vw, 22px);
+    font-size: clamp(22px, 4vw, 24px);
     direction: rtl;
   }
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+  @apply bg-slate-50 text-slate-900 transition-colors duration-300 antialiased;
 }
 
 .dark body {
@@ -47,7 +57,7 @@ body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -55,14 +65,18 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 dark:bg-slate-800 rounded-full border-4 border-transparent bg-clip-padding hover:bg-slate-300 dark:hover:bg-slate-700;
+  @apply bg-slate-200 dark:bg-slate-800/50 rounded-full border-4 border-transparent bg-clip-padding hover:bg-slate-300 dark:hover:bg-slate-700/50 transition-colors;
 }
 
-/* Hide scrollbar for clean overlays */
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+/* Glassmorphism Classes */
+.glass-effect {
+  @apply bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10;
 }
-.hide-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+.shadow-premium {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+}
+
+.dark .shadow-premium {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
 }

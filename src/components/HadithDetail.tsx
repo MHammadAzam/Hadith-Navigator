@@ -12,7 +12,8 @@ import {
   Copy,
   CheckCircle2,
   BookOpen,
-  Volume2
+  Volume2,
+  Quote
 } from 'lucide-react';
 import { Hadith, AIExplanation, SimilarItem } from '../types';
 import { AudioPlayButton } from './AudioPlayButton';
@@ -51,223 +52,224 @@ export const HadithDetail: React.FC<HadithDetailProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleShare = async () => {
+    const text = `Prophetic Guidance:\n\n"${hadith.englishTranslation}"\n\nReference: ${hadith.reference}\n\nShared via consulting Qur'an & Sunnah App`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Hadith: ${hadith.reference}`,
+          text: text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      handleCopy();
+    }
+  };
+
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <button 
-        onClick={onBack}
-        className="flex items-center gap-2 text-slate-400 hover:text-islamic-green transition-colors mb-8 group"
-      >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-sm font-medium">Back to list</span>
-      </button>
+    <div className="max-w-4xl mx-auto py-12 px-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-12">
+        <button 
+          onClick={onBack}
+          className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleCopy}
+            className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 relative"
+          >
+            {copied ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <Copy className="w-6 h-6" />}
+          </button>
+          <button 
+            onClick={onToggleBookmark}
+            className={`p-3 rounded-full transition-colors ${isBookmarked ? 'text-islamic-green bg-islamic-green/10' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+          >
+            <Bookmark className={`w-6 h-6 ${isBookmarked ? 'fill-islamic-green' : ''}`} />
+          </button>
+          <button 
+            onClick={handleShare}
+            className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500"
+          >
+            <Share2 className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
 
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 md:p-12 shadow-sm border border-slate-100 dark:border-slate-800 space-y-10 relative overflow-hidden"
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] p-10 md:p-20 border border-white/40 dark:border-white/5 shadow-premium relative overflow-hidden"
       >
-        {/* Background Graphic */}
-        <div className="absolute top-0 right-0 p-12 opacity-[0.02] dark:opacity-[0.04]">
-          <Sparkles className="w-64 h-64 rotate-12" />
+        <div className="absolute top-0 right-0 p-12 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+          <BookOpen className="w-80 h-80 -rotate-12" />
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center justify-between relative z-10">
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1 bg-islamic-green/10 text-islamic-green text-[10px] font-bold rounded-full uppercase tracking-widest border border-islamic-green/20">
-              {hadith.authenticity}
-            </span>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              Hadith {hadith.hadithNumber}
-            </span>
+        <div className="flex flex-col items-center mb-16 relative z-10">
+          <div className="w-16 h-16 rounded-3xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 flex items-center justify-center mb-6">
+            <Quote className="w-8 h-8" />
           </div>
-
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={handleCopy}
-              className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-islamic-green rounded-2xl transition-all"
-            >
-              {copied ? <CheckCircle2 className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-            </button>
-            <button className="p-3 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-islamic-green rounded-2xl transition-all">
-              <Share2 className="w-5 h-5" />
-            </button>
-            <button 
-              onClick={onToggleBookmark}
-              className={`p-3 rounded-2xl transition-all ${
-                isBookmarked 
-                  ? 'bg-islamic-gold text-white shadow-lg shadow-islamic-gold/20' 
-                  : 'bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-islamic-gold'
-              }`}
-            >
-              {isBookmarked ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
-            </button>
-          </div>
+           <span className="text-sm font-bold text-slate-400 uppercase tracking-[0.4em] mb-2">Prophetic Guidance</span>
+           <h1 className="text-lg font-bold text-slate-900 dark:text-white">{hadith.reference}</h1>
         </div>
 
-        {/* Text Content */}
-        <div className="space-y-12 relative z-10">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-8 group">
-              <div className="flex items-center gap-2">
-                <AudioPlayButton text={hadith.arabicText} lang="ar" />
-                <span className="px-4 arabic-text text-islamic-gold text-sm">متن الحديث</span>
-              </div>
-              <div className="h-px bg-slate-100 dark:bg-slate-800 flex-1 mt-4" />
-            </div>
-            <p className="arabic-text mb-10">
-              {hadith.arabicText}
-            </p>
+        <div className="space-y-16 relative z-10">
+          <div className="flex justify-end mb-4">
+             <AudioPlayButton text={hadith.arabicText} lang="ar" />
           </div>
+          <p className="arabic-text mb-12">
+            {hadith.arabicText}
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="grid md:grid-cols-2 gap-12 pt-12 border-t border-slate-50 dark:border-slate-800">
             <div className="space-y-4">
-              <div className="flex items-center justify-between text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-[1px] bg-slate-200 dark:bg-slate-800" />
-                  English Translation
-                </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">English Translation</span>
                 <AudioPlayButton text={hadith.englishTranslation} lang="en" />
               </div>
-              <p className="translation-text mb-8">
+              <p className="translation-text">
                 "{hadith.englishTranslation}"
               </p>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">
+            <div className="space-y-4 md:border-l md:border-slate-50 md:dark:border-slate-800 md:pl-12">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Urdu Translation</span>
                 <AudioPlayButton text={hadith.urduTranslation} lang="ur" />
-                <div className="flex items-center gap-2">
-                  اردو ترجمہ
-                  <div className="w-6 h-[1px] bg-slate-200 dark:bg-slate-800" />
-                </div>
               </div>
-              <p className="urdu-text text-right">
+              <p className="urdu-text">
                 {hadith.urduTranslation}
               </p>
             </div>
           </div>
         </div>
+      </motion.div>
 
-        {/* Reference & Tags */}
-        <div className="pt-8 border-t border-slate-50 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-2">
-            <Info className="w-3.5 h-3.5 text-islamic-green" />
-            <span className="reference-text">{hadith.reference}</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {hadith.tags.map(tag => (
-              <span key={tag} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded-full uppercase tracking-widest">
-                #{tag}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* AI Action */}
-        <div className="pt-4 relative z-10 space-y-6">
-          {!explanation ? (
-            <button 
-              onClick={onExplain}
-              disabled={isExplaining}
-              className="w-full h-16 bg-gradient-to-r from-islamic-green to-teal-600 text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:shadow-xl hover:shadow-islamic-green/20 transition-all disabled:opacity-50"
-            >
-              {isExplaining ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Sparkles className="w-5 h-5 text-islamic-gold" />
-              )}
-              {isExplaining ? 'Generating Explanation...' : 'Explain with AI Knowledge'}
-            </button>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-8 bg-slate-50 dark:bg-slate-800/50 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800"
-            >
-              <div className="flex items-center gap-2 text-islamic-gold font-bold text-xs uppercase tracking-widest">
-                <Sparkles className="w-4 h-4" />
-                AI Context & Explanation
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Meaning</h4>
-                    <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-serif">{explanation.generalMeaning}</p>
+      {/* AI Section */}
+      <div className="mt-16 grid grid-cols-1 gap-12">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white/40 dark:bg-black/20 backdrop-blur-3xl rounded-[3rem] border border-white/50 dark:border-white/5 shadow-premium overflow-hidden"
+        >
+          <div className="p-10 md:p-16">
+            {!explanation && !isExplaining ? (
+               <div className="flex flex-col items-center text-center space-y-8">
+                  <div className="w-20 h-20 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-3xl flex items-center justify-center text-islamic-gold">
+                    <Sparkles className="w-10 h-10" />
                   </div>
-                  <div>
-                    <h4 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Context</h4>
-                    <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-serif">{explanation.context}</p>
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Seek Wisdom</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-serif italic text-lg max-w-sm">Reveal a heart-to-heart AI reflection on this prophetic guidance.</p>
                   </div>
-                </div>
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Lessons</h4>
-                    <ul className="space-y-2">
-                      {explanation.lessons.map((lesson, i) => (
-                        <li key={i} className="flex gap-3 text-sm text-slate-700 dark:text-slate-200 font-serif">
-                          <span className="w-5 h-5 rounded-full bg-islamic-gold/10 text-islamic-gold flex items-center justify-center text-[10px] font-bold shrink-0">{i+1}</span>
-                          {lesson}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-2">Application</h4>
-                    <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-serif">{explanation.lifeApplication}</p>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 italic pt-4 border-t border-slate-200 dark:border-slate-700">
-                {explanation.disclaimer}
-              </p>
-            </motion.div>
-          )}
-
-          {/* Cross-Book Comparison */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-islamic-green font-bold text-xs uppercase tracking-widest">
-              <BookOpen className="w-4 h-4" />
-              Cross-Book Comparison
-            </div>
-            
-            {isLoadingSimilar ? (
-              <div className="flex items-center gap-3 p-6 bg-slate-50 dark:bg-slate-800/30 rounded-2xl animate-pulse">
-                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                <span className="text-xs text-slate-400">Finding related narrations in other books...</span>
-              </div>
-            ) : similarHadiths && similarHadiths.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {similarHadiths.map((rh, idx) => (
-                  <motion.div 
-                    key={idx}
-                    initial={{ opacity: 0, x: 10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    onClick={() => onSelectSimilar(rh)}
-                    className="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm cursor-pointer hover:shadow-xl hover:shadow-islamic-green/5 hover:border-islamic-green/20 transition-all"
+                  <button 
+                    onClick={onExplain}
+                    className="px-10 py-4 bg-islamic-green text-white rounded-2xl font-bold text-xs uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-islamic-green/20"
                   >
-                    <div className="flex items-center justify-between mb-2">
-                       <span className={`text-[10px] font-bold uppercase tracking-widest ${rh.type === 'hadith' ? 'text-islamic-green dark:text-emerald-500' : 'text-amber-500'}`}>
-                        {rh.source}
-                      </span>
-                      <span className="reference-text !normal-case !tracking-normal !font-serif !font-normal">
-                        {rh.reference}
-                      </span>
-                    </div>
-                    <p className="translation-text line-clamp-2 mb-2 italic">"{rh.summary}"</p>
-                    <div className="pt-2 border-t border-slate-50 dark:border-slate-800">
-                      <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Key Insight</p>
-                      <p className="text-[11px] text-islamic-green dark:text-emerald-500 font-bold leading-tight">{rh.mainPoint}</p>
-                    </div>
-                  </motion.div>
-                ))}
+                    Deep Insight
+                  </button>
+               </div>
+            ) : isExplaining ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-6">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  <Loader2 className="w-12 h-12 text-islamic-green opacity-40" />
+                </motion.div>
+                <p className="text-slate-400 font-serif italic text-xl animate-pulse">Filtering through the tradition...</p>
+              </div>
+            ) : explanation ? (
+              <div className="space-y-12">
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-islamic-gold" />
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Spiritual Echo</span>
+                </div>
+
+                <div className="relative">
+                  <Quote className="absolute -top-10 -left-10 w-20 h-20 text-islamic-green/[0.03] dark:text-emerald-500/[0.05] pointer-events-none" />
+                  <p className="text-2xl md:text-3xl font-serif text-slate-800 dark:text-white italic leading-relaxed text-center">
+                    {explanation.empathy}
+                  </p>
+                </div>
+
+                <div className="space-y-8 max-w-2xl mx-auto text-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-full text-[10px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-widest border border-islamic-green/10">
+                     The Path Forward
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-serif text-xl border-b border-slate-100 dark:border-white/5 pb-12">
+                    {explanation.narrative}
+                  </p>
+                  <p className="text-2xl md:text-3xl font-serif text-slate-800 dark:text-slate-100 italic pt-6">
+                    {explanation.reflection}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-10 border-t border-slate-100 dark:border-white/5 text-[10px] text-slate-400 dark:text-slate-500 italic justify-center">
+                   <span className="flex items-center gap-1.5">
+                     <Info className="w-3 h-3" />
+                     {explanation.disclaimer}
+                   </span>
+                </div>
               </div>
             ) : null}
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+
+        {/* Similar Guidance */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 border border-slate-100 dark:border-slate-800"
+        >
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-lg font-bold dark:text-white">Related Sunnah</h3>
+            {isLoadingSimilar && <Loader2 className="w-5 h-5 animate-spin text-islamic-green" />}
+          </div>
+
+          <div className="space-y-4">
+            {similarHadiths && similarHadiths.length > 0 ? (
+              similarHadiths.map((item, idx) => (
+                <div 
+                  key={idx}
+                  onClick={() => onSelectSimilar(item)}
+                  className="group flex flex-col p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl hover:bg-islamic-green/5 transition-all cursor-pointer border border-transparent hover:border-islamic-green/20"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="px-3 py-1 bg-white dark:bg-slate-900 rounded-lg text-[10px] font-bold text-islamic-green dark:text-emerald-500 uppercase tracking-wider">
+                      {item.source}
+                    </span>
+                    <span className="reference-text">
+                      {item.reference}
+                    </span>
+                  </div>
+                  <p className="text-slate-800 dark:text-slate-200 font-bold mb-2 group-hover:text-islamic-green dark:group-hover:text-emerald-500 transition-colors">
+                    {item.summary}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+                      {item.mainPoint}
+                    </p>
+                    <BookOpen className="w-4 h-4 text-slate-300 group-hover:text-islamic-green dark:group-hover:text-emerald-500 transition-colors" />
+                  </div>
+                </div>
+              ))
+            ) : !isLoadingSimilar && (
+              <p className="text-slate-400 text-center py-8 text-sm italic">Searching for thematically related traditional references...</p>
+            )}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 };

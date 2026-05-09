@@ -11,7 +11,9 @@ import {
   Sparkles,
   Loader2,
   ChevronRight,
-  Book
+  Book,
+  Info,
+  Quote
 } from 'lucide-react';
 import { QuranVerse, AIExplanation, SimilarItem } from '../types';
 import { AudioPlayButton } from './AudioPlayButton';
@@ -50,6 +52,26 @@ export const VerseDetail: React.FC<VerseDetailProps> = ({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleShare = async () => {
+    const text = `Divine Guidance from the Qur'an:\n\n"${verse.englishTranslation}"\n\nReference: ${verse.reference}\n\nShared via consulting Qur'an & Sunnah App`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Qur'an: ${verse.reference}`,
+          text: text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      copyToClipboard();
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
       {/* Header */}
@@ -73,22 +95,24 @@ export const VerseDetail: React.FC<VerseDetailProps> = ({
           >
             <Bookmark className={`w-6 h-6 ${isBookmarked ? 'fill-islamic-green' : ''}`} />
           </button>
-          <button className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500">
+          <button 
+            onClick={handleShare}
+            className="p-3 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500"
+          >
             <Share2 className="w-6 h-6" />
           </button>
         </div>
       </div>
 
-      {/* Verse Content */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 md:p-16 border border-slate-100 dark:border-slate-800 shadow-2xl shadow-islamic-green/5 relative overflow-hidden"
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] p-10 md:p-20 border border-white/40 dark:border-white/5 shadow-premium mt-6 relative overflow-hidden"
       >
-         <div className="absolute top-0 right-0 p-12 opacity-[0.03] pointer-events-none">
-          <Book className="w-64 h-64" />
+         <div className="absolute top-0 right-0 p-12 opacity-[0.02] dark:opacity-[0.05] pointer-events-none">
+          <BookOpen className="w-80 h-80 -rotate-12" />
         </div>
-
         <div className="flex flex-col items-center mb-16 relative z-10">
           <div className="w-16 h-16 rounded-3xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 flex items-center justify-center mb-6">
             <BookOpen className="w-8 h-8" />
@@ -132,95 +156,74 @@ export const VerseDetail: React.FC<VerseDetailProps> = ({
       </motion.div>
 
       {/* AI Section */}
-      <div className="mt-12 grid grid-cols-1 gap-8">
-        {/* Explanation Card */}
+      <div className="mt-16 grid grid-cols-1 gap-12">
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 overflow-hidden shadow-lg"
+          className="bg-white/40 dark:bg-black/20 backdrop-blur-3xl rounded-[3rem] border border-white/50 dark:border-white/5 shadow-premium overflow-hidden"
         >
-          <div className="p-8 md:p-12">
-            <div className="flex items-center justify-between mb-10">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-islamic-green/10 text-islamic-green rounded-2xl flex items-center justify-center">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold dark:text-white">AI Scholar Insights</h3>
-                  <p className="text-xs text-slate-400 font-medium">Educational context & practical lessons</p>
-                </div>
-              </div>
-              {!explanation && !isExplaining && (
-                <button 
-                  onClick={onExplain}
-                  className="px-6 py-3 bg-islamic-green text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-islamic-green/20"
+          <div className="p-10 md:p-16">
+            {!explanation && !isExplaining ? (
+               <div className="flex flex-col items-center text-center space-y-8">
+                  <div className="w-20 h-20 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-3xl flex items-center justify-center text-islamic-gold">
+                    <Sparkles className="w-10 h-10" />
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-serif font-bold text-slate-900 dark:text-white">Seek Deeper Meaning</h3>
+                    <p className="text-slate-500 dark:text-slate-400 font-serif italic text-lg max-w-sm">Tap into the light of understanding with a personalized spiritual reflection.</p>
+                  </div>
+                  <button 
+                    onClick={onExplain}
+                    className="px-10 py-4 bg-islamic-green text-white rounded-2xl font-bold text-xs uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-lg shadow-islamic-green/20"
+                  >
+                    Reveal Insight
+                  </button>
+               </div>
+            ) : isExplaining ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-6">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 >
-                  Generate Insights
-                </button>
-              )}
-            </div>
-
-            {isExplaining ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-4">
-                <Loader2 className="w-10 h-10 animate-spin text-islamic-green" />
-                <p className="text-slate-400 text-sm font-medium">Synthesizing classical commentaries...</p>
+                  <Loader2 className="w-12 h-12 text-islamic-green opacity-40" />
+                </motion.div>
+                <p className="text-slate-400 font-serif italic text-xl animate-pulse">Filtering through the divine light...</p>
               </div>
             ) : explanation ? (
               <div className="space-y-12">
-                <div className="grid md:grid-cols-2 gap-10">
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                       General Meaning
-                    </h4>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-serif text-lg">
-                      {explanation.generalMeaning}
-                    </p>
-                  </div>
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                       Context
-                    </h4>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed font-serif text-lg">
-                      {explanation.context}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-islamic-gold" />
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Sacred Reflection</span>
                 </div>
 
-                <div className="space-y-6">
-                  <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Key Practical Lessons</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {explanation.lessons.map((lesson, idx) => (
-                      <div key={idx} className="flex gap-4 p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                        <span className="flex-shrink-0 w-8 h-8 rounded-full bg-islamic-green text-white text-xs font-bold flex items-center justify-center">
-                          {idx + 1}
-                        </span>
-                        <p className="text-slate-600 dark:text-slate-400 text-sm font-medium leading-relaxed">{lesson}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-8 bg-emerald-50 dark:bg-emerald-950/30 rounded-3xl border border-emerald-100 dark:border-emerald-900/30">
-                  <h4 className="text-sm font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <BookOpen className="w-4 h-4" />
-                    Life Application
-                  </h4>
-                  <p className="text-emerald-700 dark:text-emerald-300 leading-relaxed font-serif text-lg">
-                    {explanation.lifeApplication}
+                <div className="relative">
+                  <Quote className="absolute -top-10 -left-10 w-20 h-20 text-islamic-green/[0.03] dark:text-emerald-500/[0.05] pointer-events-none" />
+                  <p className="text-2xl md:text-3xl font-serif text-slate-800 dark:text-white italic leading-relaxed text-center">
+                    {explanation.empathy}
                   </p>
                 </div>
 
-                <p className="text-[10px] text-slate-400 italic text-center border-t border-slate-50 dark:border-slate-800 pt-6">
-                  {explanation.disclaimer}
-                </p>
+                <div className="space-y-8 max-w-2xl mx-auto text-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-full text-[10px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-widest border border-islamic-green/10">
+                     Guidance Pathways
+                  </div>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed font-serif text-xl border-b border-slate-100 dark:border-white/5 pb-12">
+                    {explanation.narrative}
+                  </p>
+                  <p className="text-2xl md:text-3xl font-serif text-slate-800 dark:text-slate-100 italic pt-6">
+                    {explanation.reflection}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-10 border-t border-slate-100 dark:border-white/5 text-[10px] text-slate-400 dark:text-slate-500 italic justify-center">
+                   <span className="flex items-center gap-1.5">
+                     <Info className="w-3 h-3" />
+                     {explanation.disclaimer}
+                   </span>
+                </div>
               </div>
-            ) : (
-              <div className="flex flex-col items-center py-8 text-center">
-                <MessageSquare className="w-12 h-12 text-slate-200 mb-4" />
-                <p className="text-slate-400 text-sm max-w-sm">Tap the button above to get a simplified explanation of this verse with practical takeaways.</p>
-              </div>
-            )}
+            ) : null}
           </div>
         </motion.div>
 

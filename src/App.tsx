@@ -11,7 +11,6 @@ import {
   deleteDoc,
   doc,
   query,
-  where,
   orderBy
 } from 'firebase/firestore';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -19,40 +18,40 @@ import { auth, db } from './lib/firebase';
 import { 
   AppView, 
   AppState, 
-  HadithBook, 
-  HadithChapter, 
   Hadith, 
   QuranVerse,
   AIExplanation, 
   SavedItem,
   SimilarItem,
-  SearchItem 
+  SearchItem
 } from './types';
-import { SIHAH_E_SITTA, MOCK_HADITHS, MOCK_CHAPTERS, MOCK_VERSES } from './constants';
-import { Scroll, Sparkles, Book, ScrollText } from 'lucide-react';
+import { MOCK_HADITHS, MOCK_VERSES } from './constants';
+import { Search } from 'lucide-react';
 
 // Components
 import { Header } from './components/Header';
-import { SearchHero } from './components/SearchHero';
 import { SearchResults } from './components/SearchResults';
-import { BookGrid } from './components/BookGrid';
-import { ChapterList } from './components/ChapterList';
-import { HadithList } from './components/HadithList';
 import { HadithDetail } from './components/HadithDetail';
 import { VerseDetail } from './components/VerseDetail';
 import { BookmarkList } from './components/BookmarkList';
 import { SettingsOverlay } from './components/SettingsOverlay';
+import { DailyAyahCard } from './components/DailyAyahCard';
 import { MoodSelector } from './components/MoodSelector';
+import { BookGrid } from './components/BookGrid';
+import { ChapterList } from './components/ChapterList';
+import { HadithList } from './components/HadithList';
 
 // Constants
+import { MOCK_HADITHS, MOCK_VERSES, MOCK_CHAPTERS, SIHAH_E_SITTA } from './constants';
 import { DAILY_VERSES } from './data/dailyVerses';
-import { DailyAyahCard } from './components/DailyAyahCard';
+import { Sparkles } from 'lucide-react';
+import { getGuidance } from './services/hadithService';
+import { GuidanceResponse } from './types';
 
 const THEME_STORAGE_KEY = 'hadith_app_theme';
-const SETTINGS_STORAGE_KEY = 'hadith_app_settings';
-const DAILY_REFLECTION_STORAGE_PREFIX = 'daily_reflection_';
 const STREAK_STORAGE_KEY = 'hadith_app_streak';
 const LAST_ACTIVE_DATE_KEY = 'hadith_app_last_active';
+const DAILY_REFLECTION_STORAGE_PREFIX = 'daily_reflection_';
 
 export default function App() {
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
@@ -73,18 +72,20 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [isExplaining, setIsExplaining] = useState(false);
   const [currentExplanation, setCurrentExplanation] = useState<AIExplanation | undefined>();
-  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
-  const [similarItems, setSimilarItems] = useState<SimilarItem[]>([]);
   const [isLoadingSearch, setIsLoadingSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+  const [searchGuidance, setSearchGuidance] = useState<GuidanceResponse | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
+  const [similarItems, setSimilarItems] = useState<SimilarItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [dailyReflection, setDailyReflection] = useState<string | undefined>();
+  const explanationCache = useRef<Record<string, AIExplanation>>({});
+  const similarItemsCache = useRef<Record<string, SimilarItem[]>>({});
 
   // Item of the Day - Stable based on date string
   const ayahOfTheDay = useMemo(() => {
     const today = new Date();
-    // Use year-month-day as a seed to ensure same verse all day
     const dateString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
     let hash = 0;
     for (let i = 0; i < dateString.length; i++) {
@@ -144,8 +145,6 @@ export default function App() {
           Focus on hope, strength, and practical spiritual motivation:
           "${ayahOfTheDay.englishTranslation}"
           Reference: ${ayahOfTheDay.reference}
-          
-          Do not use complex terminology. Just the reflection.
         `;
 
         const response = await ai.models.generateContent({
@@ -163,13 +162,6 @@ export default function App() {
 
     fetchDailyReflection();
   }, [ayahOfTheDay, ai]);
-
-  // Guidance of the Day (Original)
-  const itemOfTheDay = useMemo(() => {
-    const combined = [...MOCK_HADITHS, ...MOCK_VERSES];
-    const day = new Date().getDate();
-    return combined[day % combined.length];
-  }, []);
 
   // Auth Listener
   useEffect(() => {
@@ -239,10 +231,20 @@ export default function App() {
   };
 
   const handleExplain = async (item: Hadith | QuranVerse) => {
+    const cacheKey = item.id;
+    if (explanationCache.current[cacheKey]) {
+      setCurrentExplanation(explanationCache.current[cacheKey]);
+      return;
+    }
+
     setIsExplaining(true);
-    const isHadith = 'hadithNumber' in item;
     try {
-      const prompt = `Explain simply and inspiringly: "${item.englishTranslation}" (Ref: ${item.reference}). Provide context, lessons, and life application.`;
+      const prompt = `Explain heart-to-heart: "${item.englishTranslation}" (Ref: ${item.reference}). 
+      Follow the persona: empathetic, simple, and supportive.
+      Structure:
+      - Empathy: 1-2 lines acknowledging the spirit of the message.
+      - Narrative: A smooth explanation combining context, meaning, and life lessons.
+      - Reflection: A soft ending message.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -252,19 +254,19 @@ export default function App() {
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              generalMeaning: { type: Type.STRING },
-              context: { type: Type.STRING },
-              lessons: { type: Type.ARRAY, items: { type: Type.STRING } },
-              lifeApplication: { type: Type.STRING },
+              empathy: { type: Type.STRING },
+              narrative: { type: Type.STRING },
+              reflection: { type: Type.STRING },
               disclaimer: { type: Type.STRING }
             },
-            required: ["generalMeaning", "context", "lessons", "lifeApplication", "disclaimer"]
+            required: ["empathy", "narrative", "reflection", "disclaimer"]
           }
         }
       });
       
       const explanation = JSON.parse(response.text);
       setCurrentExplanation(explanation);
+      explanationCache.current[cacheKey] = explanation;
     } catch (error) {
       console.error("AI Explanation failed:", error);
     } finally {
@@ -272,7 +274,71 @@ export default function App() {
     }
   };
 
+  const handleSearch = async (queryStr: string) => {
+    setSearchQuery(queryStr);
+    setSearchGuidance(null);
+    navigateTo('searchResult');
+    
+    setIsLoadingSearch(true);
+    setSearchError(null);
+    try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("Gemini API key is missing.");
+      }
+
+      // Get AI guidance
+      const guidance = await getGuidance(queryStr, state.language);
+      setSearchGuidance(guidance);
+
+      const prompt = `Search Qur'an & Sahih Hadiths for: "${queryStr}". Return 5 relevant entries as JSON array.
+      Fields: type(verse|hadith), id, reference, arabic, english, urdu, bookName, bookId, surahName, surahNumber, ayahNumber, hadithNumber, relevanceScore.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: { 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING },
+                id: { type: Type.STRING },
+                reference: { type: Type.STRING },
+                arabic: { type: Type.STRING },
+                english: { type: Type.STRING },
+                urdu: { type: Type.STRING },
+                bookName: { type: Type.STRING },
+                bookId: { type: Type.STRING },
+                surahName: { type: Type.STRING },
+                surahNumber: { type: Type.NUMBER },
+                ayahNumber: { type: Type.NUMBER },
+                hadithNumber: { type: Type.STRING },
+                relevanceScore: { type: Type.NUMBER }
+              },
+              required: ["type", "id", "reference", "arabic", "english", "urdu"]
+            }
+          }
+        }
+      });
+      
+      const results = JSON.parse(response.text);
+      setSearchResults(results || []);
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : "Search failed.");
+    } finally {
+      setIsLoadingSearch(false);
+    }
+  };
+
   const fetchSimilarItems = async (item: Hadith | QuranVerse) => {
+    const cacheKey = item.id;
+    if (similarItemsCache.current[cacheKey]) {
+      setSimilarItems(similarItemsCache.current[cacheKey]);
+      return;
+    }
+
     setIsLoadingSimilar(true);
     setSimilarItems([]);
     try {
@@ -306,96 +372,11 @@ export default function App() {
       
       const data = JSON.parse(response.text);
       setSimilarItems(data);
+      similarItemsCache.current[cacheKey] = data;
     } catch (error) {
       console.error("Similar items fetch failed:", error);
     } finally {
       setIsLoadingSimilar(false);
-    }
-  };
-
-  const handleSearch = async (queryStr: string) => {
-    setSearchQuery(queryStr);
-    navigateTo('searchResult');
-    setIsLoadingSearch(true);
-    setSearchError(null);
-    try {
-      if (!process.env.GEMINI_API_KEY) {
-        throw new Error("Gemini API key is missing. Please check your environment variables.");
-      }
-      const prompt = `Search Qur'an & Sahih Hadiths for: "${queryStr}". Provide 3-5 relevant results (never empty). If the query is an emotion, map it to a positive Islamic concept (e.g., sad -> hope).`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: { 
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                type: { type: Type.STRING },
-                id: { type: Type.STRING },
-                reference: { type: Type.STRING },
-                arabic: { type: Type.STRING },
-                english: { type: Type.STRING },
-                urdu: { type: Type.STRING },
-                bookName: { type: Type.STRING },
-                bookId: { type: Type.STRING },
-                surahName: { type: Type.STRING },
-                surahNumber: { type: Type.NUMBER },
-                ayahNumber: { type: Type.NUMBER },
-                hadithNumber: { type: Type.STRING },
-                relevanceScore: { type: Type.NUMBER },
-                isRelated: { type: Type.BOOLEAN }
-              },
-              required: ["type", "id", "reference", "arabic", "english", "urdu"]
-            }
-          }
-        }
-      });
-      
-      const results = JSON.parse(response.text);
-      setSearchResults(results || []);
-    } catch (error) {
-      console.error("Search failed:", error);
-      setSearchError(error instanceof Error ? error.message : "Search failed. Please try again later.");
-    } finally {
-      setIsLoadingSearch(false);
-    }
-  };
-
-  const handleSelectSimilarItem = (item: SimilarItem) => {
-    if (item.type === 'verse') {
-      navigateTo('verseDetail', {
-        selectedVerse: {
-          id: item.id || `sim-v-${Date.now()}`,
-          surahNumber: 0,
-          ayahNumber: 0,
-          surahName: item.source.replace('Surah ', ''),
-          surahNameArabic: '',
-          arabicText: item.arabic || '',
-          englishTranslation: item.english || '',
-          urduTranslation: item.urdu || '',
-          reference: item.reference,
-          tags: []
-        }
-      });
-    } else {
-      navigateTo('hadithDetail', {
-        selectedHadith: {
-          id: item.id || `sim-h-${Date.now()}`,
-          bookId: item.source.toLowerCase().includes('bukhari') ? 'bukhari' : 'muslim',
-          chapterId: 'similar',
-          hadithNumber: item.reference.split(' ').pop() || '1',
-          arabicText: item.arabic || '',
-          englishTranslation: item.english || '',
-          urduTranslation: item.urdu || '',
-          reference: item.reference,
-          tags: [],
-          authenticity: 'Sahih'
-        }
-      });
     }
   };
 
@@ -405,18 +386,10 @@ export default function App() {
       view,
       ...payload
     }));
-    // Reset view specific state
-    if (view === 'hadithDetail') {
+    if (view === 'hadithDetail' || view === 'verseDetail') {
       setCurrentExplanation(undefined);
-      if (payload?.selectedHadith) {
-        fetchSimilarItems(payload.selectedHadith);
-      }
-    }
-    if (view === 'verseDetail') {
-      setCurrentExplanation(undefined);
-      if (payload?.selectedVerse) {
-        fetchSimilarItems(payload.selectedVerse);
-      }
+      if (payload?.selectedHadith) fetchSimilarItems(payload.selectedHadith);
+      if (payload?.selectedVerse) fetchSimilarItems(payload.selectedVerse);
     }
   };
 
@@ -454,6 +427,40 @@ export default function App() {
     }
   };
 
+  const handleSelectSimilarItem = (item: SimilarItem) => {
+    if (item.type === 'verse') {
+      navigateTo('verseDetail', {
+        selectedVerse: {
+          id: item.id || `sim-v-${Date.now()}`,
+          surahNumber: 0,
+          ayahNumber: 0,
+          surahName: item.source.replace('Surah ', ''),
+          surahNameArabic: '',
+          arabicText: item.arabic || '',
+          englishTranslation: item.english || '',
+          urduTranslation: item.urdu || '',
+          reference: item.reference,
+          tags: []
+        }
+      });
+    } else {
+      navigateTo('hadithDetail', {
+        selectedHadith: {
+          id: item.id || `sim-h-${Date.now()}`,
+          bookId: item.source.toLowerCase().includes('bukhari') ? 'bukhari' : 'muslim',
+          chapterId: 'similar',
+          hadithNumber: item.reference.split(' ').pop() || '1',
+          arabicText: item.arabic || '',
+          englishTranslation: item.english || '',
+          urduTranslation: item.urdu || '',
+          reference: item.reference,
+          tags: [],
+          authenticity: 'Sahih'
+        }
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
       <Header 
@@ -477,40 +484,43 @@ export default function App() {
               exit={{ opacity: 0 }}
               className="max-w-7xl mx-auto"
             >
-              <SearchHero onSearch={handleSearch} />
-
-              <div className="px-4 -mt-10 mb-20 space-y-24">
-                <div className="px-0">
-                  <DailyAyahCard 
-                    verse={ayahOfTheDay}
-                    reflection={dailyReflection}
-                    isBookmarked={bookmarks.some(b => b.id === ayahOfTheDay.id)}
-                    onToggleBookmark={() => toggleBookmark(ayahOfTheDay, 'verse')}
-                    onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
-                  />
+              <div className="pt-32 pb-16 px-4 text-center space-y-6">
+                <h2 className="text-4xl md:text-6xl font-serif font-bold text-slate-900 dark:text-white">Islamic Guidance</h2>
+                <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-lg italic font-serif">"Seek wisdom from the Qur'an and authentic Sunnah."</p>
+                
+                <div className="max-w-2xl mx-auto pt-8">
+                  <div className="relative group">
+                    <input 
+                      type="text"
+                      placeholder="Ask any question about life, faith, or guidance..."
+                      className="w-full h-18 pl-14 pr-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-islamic-green focus:ring-4 focus:ring-islamic-green/5 transition-all text-lg shadow-premium outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearch((e.target as HTMLInputElement).value);
+                        }
+                      }}
+                    />
+                    <Sparkles className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-islamic-gold animate-pulse" />
+                  </div>
                 </div>
+              </div>
+
+              <div className="px-4 space-y-24 mb-20">
+                <DailyAyahCard 
+                  verse={ayahOfTheDay}
+                  reflection={dailyReflection}
+                  isBookmarked={bookmarks.some(b => b.id === ayahOfTheDay.id)}
+                  onToggleBookmark={() => toggleBookmark(ayahOfTheDay, 'verse')}
+                  onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
+                />
 
                 <MoodSelector onMoodSelect={handleSearch} />
-              </div>
-            </motion.section>
-          )}
 
-          {state.view === 'searchResult' && (
-            <motion.section
-              key="searchResult"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-            >
-              <SearchResults 
-                query={searchQuery}
-                results={searchResults}
-                isLoading={isLoadingSearch}
-                onSelectResult={handleSelectSearchResult}
-                onBack={() => navigateTo('home')}
-                onSearch={handleSearch}
-                error={searchError}
-              />
+                <BookGrid 
+                  books={SIHAH_E_SITTA} 
+                  onSelectBook={(book) => navigateTo('book', { selectedBook: book })} 
+                />
+              </div>
             </motion.section>
           )}
 
@@ -520,6 +530,7 @@ export default function App() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="pt-24"
             >
               <ChapterList 
                 book={state.selectedBook}
@@ -536,6 +547,7 @@ export default function App() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="pt-24"
             >
               <HadithList 
                 book={state.selectedBook}
@@ -549,12 +561,34 @@ export default function App() {
             </motion.section>
           )}
 
+          {state.view === 'searchResult' && (
+            <motion.section
+              key="searchResult"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="w-full pt-24"
+            >
+              <SearchResults 
+                query={searchQuery}
+                results={searchResults}
+                guidance={searchGuidance}
+                isLoading={isLoadingSearch}
+                onSelectResult={handleSelectSearchResult}
+                onBack={() => navigateTo('home')}
+                onSearch={handleSearch}
+                error={searchError}
+              />
+            </motion.section>
+          )}
+
           {state.view === 'hadithDetail' && state.selectedHadith && (
             <motion.section
               key="hadithDetail"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full pt-24"
             >
               <HadithDetail 
                 hadith={state.selectedHadith}
@@ -577,6 +611,7 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full pt-24"
             >
               <VerseDetail 
                 verse={state.selectedVerse}
@@ -604,14 +639,13 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowBookmarks(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]" 
+              className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60]" 
             />
             <motion.aside 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-lg z-[70] shadow-2xl"
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md z-[70] bg-white dark:bg-slate-900 shadow-2xl"
             >
               <BookmarkList 
                 bookmarks={bookmarks as any}
@@ -637,14 +671,13 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowSettings(false)}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60]" 
+              className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60]" 
             />
             <motion.aside 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-lg z-[70] shadow-2xl"
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md z-[70] bg-white dark:bg-slate-900 shadow-2xl"
             >
               <SettingsOverlay 
                 onClose={() => setShowSettings(false)}
@@ -659,9 +692,8 @@ export default function App() {
           </>
         )}
       </AnimatePresence>
-
       {/* Background Decorative Element */}
-      <div className="fixed bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-islamic-green/5 to-transparent pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-slate-500/5 to-transparent pointer-events-none -z-10" />
     </div>
   );
 }

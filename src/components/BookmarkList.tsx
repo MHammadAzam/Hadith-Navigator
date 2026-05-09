@@ -6,7 +6,8 @@ import {
   ChevronRight, 
   X,
   Scroll,
-  BookOpen
+  BookOpen,
+  Share2
 } from 'lucide-react';
 import { SavedItem } from '../types';
 
@@ -23,6 +24,28 @@ export const BookmarkList: React.FC<BookmarkListProps> = ({
   onRemoveBookmark,
   onClose
 }) => {
+  const handleShare = async (e: React.MouseEvent, item: SavedItem) => {
+    e.stopPropagation();
+    const text = `${item.type === 'verse' ? "Divine Guidance from the Qur'an" : "Prophetic Guidance"}:\n\n"${item.data.englishTranslation}"\n\nReference: ${item.data.reference}\n\nShared via consulting Qur'an & Sunnah App`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${item.type === 'hadith' ? 'Hadith' : 'Qur\'an'}: ${item.data.reference}`,
+          text: text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('Quote copied to clipboard!');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
       <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
@@ -68,15 +91,23 @@ export const BookmarkList: React.FC<BookmarkListProps> = ({
                       {b.type === 'hadith' ? (b.data as any).bookId?.toUpperCase() : 'The Qur\'an'}
                     </span>
                   </div>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemoveBookmark(b.id);
-                    }}
-                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={(e) => handleShare(e, b)}
+                      className="p-2 text-slate-300 hover:text-islamic-green hover:bg-islamic-green/5 rounded-lg transition-all"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveBookmark(b.id);
+                      }}
+                      className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 <p className="arabic-text line-clamp-1 mb-2">

@@ -9,6 +9,7 @@ export const SIHAH_E_SITTA: HadithBook[] = [
     description: 'The most authentic collection of Hadith.',
     hadithCount: 7563,
     chapterCount: 97,
+    author: 'Imam al-Bukhari',
     color: '#059669', // Emerald
     icon: 'Scroll'
   },
@@ -20,6 +21,7 @@ export const SIHAH_E_SITTA: HadithBook[] = [
     description: 'One of the Sahihayn, highly authentic.',
     hadithCount: 7500,
     chapterCount: 57,
+    author: 'Imam Muslim',
     color: '#0d9488', // Teal
     icon: 'BookOpen'
   },
@@ -31,6 +33,7 @@ export const SIHAH_E_SITTA: HadithBook[] = [
     description: 'Focuses primarily on legal rulings.',
     hadithCount: 5274,
     chapterCount: 43,
+    author: 'Imam Abu Dawood',
     color: '#b45309', // Amber
     icon: 'Compass'
   },
@@ -42,6 +45,7 @@ export const SIHAH_E_SITTA: HadithBook[] = [
     description: 'Noted for its classification of hadiths.',
     hadithCount: 3956,
     chapterCount: 49,
+    author: 'Imam at-Tirmidhi',
     color: '#be123c', // Rose
     icon: 'Heart'
   },
@@ -53,6 +57,7 @@ export const SIHAH_E_SITTA: HadithBook[] = [
     description: 'Renowned for its rigorous legal analysis.',
     hadithCount: 5758,
     chapterCount: 52,
+    author: 'Imam an-Nasa\'i',
     color: '#4338ca', // Indigo
     icon: 'Sparkles'
   },
@@ -64,6 +69,7 @@ export const SIHAH_E_SITTA: HadithBook[] = [
     description: 'The sixth book of the Sihah al-Sittah.',
     hadithCount: 4341,
     chapterCount: 37,
+    author: 'Imam Ibn Majah',
     color: '#7e22ce', // Purple
     icon: 'Layers'
   }

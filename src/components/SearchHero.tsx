@@ -1,21 +1,13 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState } from 'react';
 import { Search, Sparkles } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface SearchHeroProps {
   onSearch: (query: string) => void;
 }
 
-const POPULAR_TOPICS = [
-  { label: 'Patience', query: 'patience' },
-  { label: 'الصلاة', query: 'prayer' },
-  { label: 'Honesty', query: 'honesty' },
-  { label: 'Forgiveness', query: 'forgiveness' },
-  { label: 'Parents', query: 'parents' }
-];
-
 export const SearchHero: React.FC<SearchHeroProps> = ({ onSearch }) => {
-  const [query, setQuery] = React.useState('');
+  const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,79 +17,64 @@ export const SearchHero: React.FC<SearchHeroProps> = ({ onSearch }) => {
   };
 
   return (
-    <div className="relative pt-20 pb-28 px-4 flex flex-col items-center text-center overflow-hidden">
-      {/* Background Decorative Art */}
-      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none scale-150">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[url('https://www.transparenttextures.com/patterns/islamic-art.png')] bg-repeat" />
-      </div>
+    <div className="relative pt-32 pb-48 px-6 overflow-hidden">
+      {/* Spiritual Light Effects */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-islamic-green/[0.03] dark:bg-emerald-500/[0.03] rounded-full blur-[120px] -z-10" />
+      <div className="absolute top-20 right-0 w-[400px] h-[400px] bg-islamic-gold/[0.03] rounded-full blur-[100px] -z-10" />
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-full max-w-4xl"
-      >
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+      <div className="max-w-4xl mx-auto text-center space-y-12 relative">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-islamic-green/10 text-islamic-green text-[10px] font-bold uppercase tracking-[0.2em] mb-10 border border-islamic-green/20"
+          transition={{ duration: 0.8 }}
+          className="space-y-6"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          AI-Powered Knowledge Retrieval
+          <div className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 dark:bg-slate-900/40 backdrop-blur-md rounded-full border border-white dark:border-white/5 shadow-sm mb-4">
+             <Sparkles className="w-4 h-4 text-islamic-gold animate-pulse" />
+             <span className="text-[10px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-[0.3em]">The Divine Light AI</span>
+          </div>
+          <h1 className="text-5xl md:text-8xl font-serif font-bold text-slate-900 dark:text-white tracking-tight leading-[1.1]">
+            Sacred <span className="text-islamic-green italic">Guidance</span>
+          </h1>
+          <p className="text-lg md:text-2xl text-slate-500 dark:text-slate-400 font-serif italic max-w-2xl mx-auto leading-relaxed">
+            "Ask your heart's questions, find peace in the Qur'an and authentic Sunnah."
+          </p>
         </motion.div>
-        
-        <h2 className="font-serif text-5xl md:text-7xl font-bold text-slate-900 dark:text-white mb-8 leading-[1.1]">
-          Seek Wisdom in <br/> <span className="text-islamic-green italic">Allah's Words.</span>
-        </h2>
-        
-        <p className="text-slate-500 dark:text-slate-400 text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
-          Ask questions about life, faith, and practice. We search through the Qur'an and authentic Hadith to give you guidance from the Sunnah.
-        </p>
 
-        <form onSubmit={handleSubmit} className="relative group max-w-2xl mx-auto">
-          <motion.div
-            whileFocus={{ scale: 1.01 }}
-            className="relative"
-          >
-            <div className="absolute inset-0 bg-islamic-green/5 blur-2xl rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
-            <div className="relative flex items-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-2 shadow-2xl shadow-islamic-green/10 focus-within:border-islamic-green/50 focus-within:ring-4 focus-within:ring-islamic-green/5 transition-all">
-              <div className="pl-6 pr-4">
-                <Search className="w-6 h-6 text-slate-300 group-focus-within:text-islamic-green transition-colors" />
-              </div>
-              <input 
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ask about faith, patience, prayer..."
-                className="flex-1 h-14 bg-transparent text-lg dark:text-white outline-none font-medium placeholder:text-slate-300 dark:placeholder:text-slate-600"
-              />
-              <button 
-                type="submit"
-                className="px-8 h-14 bg-islamic-green text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-islamic-green/20 active:scale-95 flex items-center gap-2"
+        <motion.form 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          onSubmit={handleSubmit}
+          className="relative max-w-2xl mx-auto group"
+        >
+          <div className="relative">
+            <div className="absolute inset-0 bg-islamic-green/10 blur-2xl rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <input 
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="What is on your heart today?"
+              className="w-full h-20 pl-16 pr-8 bg-white dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] border border-white dark:border-white/5 shadow-premium focus:ring-4 focus:ring-islamic-green/5 focus:border-islamic-green transition-all text-lg font-serif outline-none placeholder:text-slate-400"
+            />
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-hover:text-islamic-green transition-colors" />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Try seeking:</span>
+            {['Patience', 'Finding Peace', 'Meaning of Love', 'Strength in Trials'].map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => onSearch(tag)}
+                className="px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 border border-white dark:border-white/5 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-islamic-green hover:text-white transition-all shadow-sm"
               >
-                <span>Search</span>
-                <Sparkles className="w-4 h-4" />
+                {tag}
               </button>
-            </div>
-          </motion.div>
-        </form>
-
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">Deep Topics:</span>
-          {POPULAR_TOPICS.map((topic, i) => (
-            <motion.button
-              key={topic.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 + (i * 0.1) }}
-              onClick={() => onSearch(topic.query)}
-              className="px-6 py-3 bg-white dark:bg-slate-900 hover:bg-islamic-green hover:text-white rounded-full text-sm font-semibold text-slate-600 dark:text-slate-300 transition-all border border-slate-100 dark:border-slate-800 hover:border-islamic-green shadow-sm hover:shadow-xl hover:shadow-islamic-green/20"
-            >
-              {topic.label}
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
+            ))}
+          </div>
+        </motion.form>
+      </div>
     </div>
   );
 };

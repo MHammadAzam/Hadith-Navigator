@@ -8,6 +8,7 @@ export interface HadithBook {
   description: string;
   hadithCount: number;
   chapterCount: number;
+  author: string;
   color: string;
   icon: string;
 }
@@ -49,10 +50,9 @@ export interface QuranVerse {
 }
 
 export interface AIExplanation {
-  generalMeaning: string;
-  context: string;
-  lessons: string[];
-  lifeApplication: string;
+  empathy: string;
+  narrative: string;
+  reflection: string;
   disclaimer: string;
 }
 
@@ -63,6 +63,22 @@ export interface SavedItem {
   savedAt: number;
   notes?: string;
   explanation?: AIExplanation;
+}
+
+export interface GuidanceResponse {
+  empathy: string;
+  gentleGuidance: string;
+  quranReference: {
+    text: string;
+    translation: string;
+    reference: string;
+  };
+  hadithReference: {
+    text: string;
+    translation: string;
+    reference: string;
+  };
+  reflection: string;
 }
 
 export type AppView = 'home' | 'book' | 'hadithList' | 'hadithDetail' | 'verseDetail' | 'bookmarks' | 'settings' | 'searchResult';

@@ -3,69 +3,52 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface GuidanceResponse {
-  intent: 'Knowledge' | 'Emotional' | 'Decision' | 'Worship';
-  relevantSources: {
-    type: 'Quran' | 'Hadith';
-    arabic: string;
-    english: string;
-    urdu: string;
-    source: string;
-  }[];
-  explanation: {
-    simple: string;
-    modern: string;
+  empathy: string;
+  gentleGuidance: string;
+  quranReference: {
+    text: string;
+    translation: string;
+    reference: string;
   };
-  lifeApplication: {
-    actions: string;
-    habits: string;
-    guidance: string;
+  hadithReference: {
+    text: string;
+    translation: string;
+    reference: string;
   };
-  reflection: {
-    thought: string;
-    question: string;
-  };
-  actionSteps: string[];
+  reflection: string;
 }
 
-const SYSTEM_INSTRUCTION = `You are "Guidance AI", an advanced Islamic knowledge and life guidance system.
+const SYSTEM_INSTRUCTION = `You are a deeply human, empathetic, and emotionally aware Islamic AI assistant. 
 
-Your purpose is:
-→ Help users understand Qur’an & Hadith
-→ Provide accurate spiritual guidance
-→ Help users apply Islamic teachings in real life
-→ Build positive habits and reflection
+Your goal is to make the user feel:
+- Understood
+- Emotionally supported
+- Spiritually guided
+- Never alone
 
-STRICT RULES (NON-NEGOTIABLE):
-1. NEVER fabricate Qur’an verses or Hadith.
-2. ONLY use authentic sources (Qur'an, Sahih Bukhari, Sahih Muslim, etc.).
-3. If no relevant content exists, return a clear message in the response saying "No relevant content found".
-4. Do NOT act like a scholar giving fatwa.
-5. Keep explanations simple and practical.
-6. If the user expresses sadness, stress, anxiety, or anger, include a gentle supportive tone.
+RESPONSE STYLE RULES:
+1. Always start with HEARTFELT EMPATHY. Acknowledge the user's feelings (sadness, curiosity, stress, etc.).
+2. Use simple, natural, and comforting English.
+3. Never respond like a robotic list or database.
 
-Return the response in JSON format.`;
+STRUCTURE OF EVERY RESPONSE:
+1. Empathy: 1-2 lines acknowledging the emotion or intent.
+2. Gentle Guidance: Briefly explain the Islamic perspective in simple words.
+3. Quran Reference: Introduce softly ("In the Qur'an, Allah says...") then provide the verse.
+4. Hadith Reference: Introduce softly ("The Prophet ﷺ also taught...") then provide the hadith.
+5. Reflection: End with a hopeful, soft message or takeaway.
 
-export interface SearchFilters {
-  topic?: string;
-  narrator?: string;
-  authenticity?: 'Sahih' | 'Hasan' | 'All';
-}
+STRICT RULES:
+- Never say "No results found". Even if search is weak, provide spiritual comfort and general wisdom.
+- Use only authentic sources.
+- Maintain a calm, respectful, and supportive tone.`;
 
 export async function getGuidance(
   query: string, 
-  language: string = 'English',
-  filters?: SearchFilters
+  language: string = 'English'
 ): Promise<GuidanceResponse | null> {
   try {
-    const filterText = filters ? `
-      Filters:
-      - Topic: ${filters.topic || 'Any'}
-      - Authenticity: ${filters.authenticity || 'Any'}
-    ` : '';
-
-    const finalPrompt = query.trim().length === 0 
-      ? "Provide a daily spiritual reminder from Quran/Hadith." 
-      : `User Query: ${query}\nUser Preferred Language: ${language}${filterText}`;
+    const finalPrompt = `Provide spiritual heart-to-heart guidance for: "${query}" in ${language}.`;
 
     const result = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -76,52 +59,29 @@ export async function getGuidance(
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            intent: { type: Type.STRING, enum: ['Knowledge', 'Emotional', 'Decision', 'Worship'] },
-            relevantSources: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  type: { type: Type.STRING, enum: ['Quran', 'Hadith'] },
-                  arabic: { type: Type.STRING },
-                  english: { type: Type.STRING },
-                  urdu: { type: Type.STRING },
-                  source: { type: Type.STRING }
-                },
-                required: ["type", "arabic", "english", "urdu", "source"]
-              }
-            },
-            explanation: {
+            empathy: { type: Type.STRING },
+            gentleGuidance: { type: Type.STRING },
+            quranReference: {
               type: Type.OBJECT,
               properties: {
-                simple: { type: Type.STRING },
-                modern: { type: Type.STRING }
+                text: { type: Type.STRING },
+                translation: { type: Type.STRING },
+                reference: { type: Type.STRING }
               },
-              required: ["simple", "modern"]
+              required: ["text", "translation", "reference"]
             },
-            lifeApplication: {
+            hadithReference: {
               type: Type.OBJECT,
               properties: {
-                actions: { type: Type.STRING },
-                habits: { type: Type.STRING },
-                guidance: { type: Type.STRING }
+                text: { type: Type.STRING },
+                translation: { type: Type.STRING },
+                reference: { type: Type.STRING }
               },
-              required: ["actions", "habits", "guidance"]
+              required: ["text", "translation", "reference"]
             },
-            reflection: {
-              type: Type.OBJECT,
-              properties: {
-                thought: { type: Type.STRING },
-                question: { type: Type.STRING }
-              },
-              required: ["thought", "question"]
-            },
-            actionSteps: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            }
+            reflection: { type: Type.STRING }
           },
-          required: ["intent", "relevantSources", "explanation", "lifeApplication", "reflection", "actionSteps"]
+          required: ["empathy", "gentleGuidance", "quranReference", "hadithReference", "reflection"]
         }
       }
     });

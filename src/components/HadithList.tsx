@@ -5,7 +5,8 @@ import {
   ChevronRight, 
   Bookmark, 
   BookmarkCheck,
-  Search
+  Search,
+  Share2
 } from 'lucide-react';
 import { Hadith, HadithBook, HadithChapter } from '../types';
 
@@ -28,6 +29,28 @@ export const HadithList: React.FC<HadithListProps> = ({
   onToggleBookmark,
   onBack
 }) => {
+  const handleShare = async (e: React.MouseEvent, hadith: Hadith) => {
+    e.stopPropagation();
+    const text = `Prophetic Guidance:\n\n"${hadith.englishTranslation}"\n\nReference: ${hadith.reference}\n\nShared via consulting Qur'an & Sunnah App`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Hadith: ${hadith.reference}`,
+          text: text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error sharing:', err);
+        }
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('Quote copied to clipboard!');
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       {/* Header */}
@@ -77,6 +100,12 @@ export const HadithList: React.FC<HadithListProps> = ({
               </div>
 
               <div className="flex flex-row md:flex-col items-center gap-2">
+                <button 
+                  onClick={(e) => handleShare(e, hadith)}
+                  className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-islamic-green transition-all"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
