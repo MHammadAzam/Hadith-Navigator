@@ -1,23 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
+import { GuidanceResponse } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-export interface GuidanceResponse {
-  reflectionTitle: string;
-  aiSummary: string;
-  suggestedThemes: string[];
-  followUpQuestions: string[];
-  quranReference: {
-    text: string;
-    translation: string;
-    reference: string;
-  };
-  hadithReference: {
-    text: string;
-    translation: string;
-    reference: string;
-  };
-}
 
 const SYSTEM_INSTRUCTION = `You are a deeply human, empathetic, and emotionally aware Islamic AI assistant. 
 
@@ -34,7 +18,8 @@ RESPONSE STYLE RULES:
 
 STRUCTURE OF EVERY RESPONSE:
 1. reflectionTitle: A short, poetic title (e.g., "The Strength of Faith" or "Healing for the Heart").
-2. aiSummary: A warm paragraph (2-3 sentences). If personal, be empathetic. If topical, provide a beautiful spiritual reflection on that topic.
+2. empathyStatement: A direct, 1-sentence empathy statement that acknowledges the user's emotional state or the depth/significance of their search topic.
+3. aiSummary: A warm paragraph (2-3 sentences). If personal, be empathetic. If topical, provide a beautiful spiritual reflection on that topic.
 3. suggestedThemes: 3-4 short themes.
 4. followUpQuestions: 3 questions the user might ask next.
 5. quranReference: A relevant verse.
@@ -61,6 +46,7 @@ export async function getGuidance(
           type: Type.OBJECT,
           properties: {
             reflectionTitle: { type: Type.STRING },
+            empathyStatement: { type: Type.STRING },
             aiSummary: { type: Type.STRING },
             suggestedThemes: { 
               type: Type.ARRAY,
@@ -89,7 +75,7 @@ export async function getGuidance(
               required: ["text", "translation", "reference"]
             }
           },
-          required: ["reflectionTitle", "aiSummary", "suggestedThemes", "followUpQuestions", "quranReference", "hadithReference"]
+          required: ["reflectionTitle", "empathyStatement", "aiSummary", "suggestedThemes", "followUpQuestions", "quranReference", "hadithReference"]
         }
       }
     });

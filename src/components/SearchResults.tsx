@@ -125,6 +125,22 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 </div>
               </div>
 
+              {guidance.empathyStatement && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="max-w-2xl mx-auto relative z-10"
+                >
+                  <p className="text-sm md:text-base font-bold text-islamic-green uppercase tracking-widest opacity-80 mb-4">
+                    A Note of Empathy
+                  </p>
+                  <p className="text-lg md:text-xl font-medium text-slate-800 dark:text-slate-200 leading-relaxed">
+                    {guidance.empathyStatement}
+                  </p>
+                </motion.div>
+              )}
+
               <div className="max-w-3xl mx-auto py-4 relative z-10">
                 <p className="text-xl md:text-3xl font-serif text-slate-700 dark:text-slate-200 leading-[1.6] italic">
                   "{guidance.aiSummary}"

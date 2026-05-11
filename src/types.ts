@@ -67,6 +67,7 @@ export interface SavedItem {
 
 export interface GuidanceResponse {
   reflectionTitle: string;
+  empathyStatement: string;
   aiSummary: string;
   suggestedThemes: string[];
   followUpQuestions: string[];
