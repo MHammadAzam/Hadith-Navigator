@@ -9,7 +9,8 @@ import {
   ChevronRight,
   Info,
   Lightbulb,
-  BookOpen
+  BookOpen,
+  Book
 } from 'lucide-react';
 import { SearchItem, GuidanceResponse } from '../types';
 
@@ -37,14 +38,20 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   return (
     <div className="max-w-5xl mx-auto py-12 px-4">
       {/* Search Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-16">
-        <button 
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-16"
+      >
+        <motion.button 
+          whileHover={{ x: -4 }}
+          whileTap={{ scale: 0.95 }}
           onClick={onBack}
           className="flex items-center gap-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group self-start"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           <span className="text-xs font-bold uppercase tracking-[0.2em]">Home</span>
-        </button>
+        </motion.button>
 
         <div className="flex-1 max-w-xl">
            <div className="relative group">
@@ -54,161 +61,221 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') onSearch((e.target as HTMLInputElement).value);
                 }}
-                className="w-full h-14 pl-12 pr-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:border-islamic-green focus:ring-4 focus:ring-islamic-green/5 shadow-premium text-sm outline-none transition-all"
+                className="w-full h-14 pl-12 pr-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:border-islamic-green focus:ring-[6px] focus:ring-islamic-green/5 shadow-premium text-sm outline-none transition-all placeholder:text-slate-300"
               />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-islamic-green transition-colors" />
            </div>
         </div>
-      </div>
+      </motion.div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-6">
+        <div className="flex flex-col items-center justify-center py-48 text-slate-400 gap-8">
           <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="w-24 h-24 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-full flex items-center justify-center"
           >
-            <Loader2 className="w-12 h-12 text-islamic-green/40" />
+            <Sparkles className="w-10 h-10 text-islamic-gold" />
           </motion.div>
-          <div className="text-center space-y-2">
-            <p className="font-serif italic text-2xl dark:text-white">Seeking Wisdom...</p>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] opacity-60">Consulting the Sacred Logs</p>
+          <div className="text-center space-y-3">
+            <p className="font-serif italic text-3xl dark:text-white">Seeking Wisdom...</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40">Connecting with Sacred Text</p>
           </div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-[2rem] p-12 text-center space-y-6">
-           <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 text-red-500 rounded-full flex items-center justify-center mx-auto">
-             <Info className="w-8 h-8" />
+        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-[3rem] p-16 text-center space-y-8 shadow-premium">
+           <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto">
+             <Info className="w-10 h-10" />
            </div>
-           <div className="space-y-2">
-             <h3 className="text-xl font-bold dark:text-white">Search Interrupted</h3>
-             <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">{error}</p>
+           <div className="space-y-3">
+             <h3 className="text-2xl font-serif font-bold dark:text-white">A Moment's Delay</h3>
+             <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">"{error}"</p>
            </div>
            <button 
              onClick={() => onSearch(query)}
-             className="px-8 py-3 bg-slate-900 dark:bg-white dark:text-slate-900 text-white rounded-xl font-bold text-xs uppercase tracking-widest"
+             className="px-10 py-4 bg-islamic-green text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-islamic-green/20"
            >
              Try Again
            </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Main Results */}
-          <div className="lg:col-span-8 space-y-8">
-            <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] pl-2 flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-islamic-green" />
-              Direct References
-            </h3>
-            
-            {results.length > 0 ? (
-              results.map((r, idx) => (
-                <motion.div
-                  key={r.id || idx}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
-                  onClick={() => onSelectResult(r)}
-                  className="group bg-white dark:bg-slate-900/50 backdrop-blur-xl border border-slate-100 dark:border-white/5 rounded-[2.5rem] p-8 md:p-12 hover:border-islamic-green/30 transition-all cursor-pointer shadow-premium relative overflow-hidden"
+        <div className="space-y-20">
+          {/* Supportive AI Guidance */}
+          {guidance && (
+            <motion.div 
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-islamic-green/[0.02] dark:bg-emerald-500/[0.02] border border-islamic-green/5 dark:border-emerald-500/10 rounded-[3rem] p-8 md:p-16 text-center space-y-12 relative overflow-hidden shadow-inner"
+            >
+              <div className="flex flex-col items-center gap-6 relative z-10">
+                <motion.div 
+                  initial={{ rotate: -15 }}
+                  animate={{ rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 100 }}
+                  className="w-16 h-16 bg-white dark:bg-slate-800 rounded-3xl shadow-premium flex items-center justify-center text-islamic-gold border border-slate-100 dark:border-white/5"
                 >
-                  <div className="flex flex-col space-y-10 relative z-10">
-                    <p className="arabic-text text-right text-2xl md:text-3xl leading-relaxed">
-                      {r.arabic.length > 200 ? r.arabic.substring(0, 200) + '...' : r.arabic}
+                  <Sparkles className="w-8 h-8" />
+                </motion.div>
+                <div className="space-y-3">
+                  <span className="text-[10px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-[0.5em] opacity-60">Heavenly Insight</span>
+                  <h2 className="text-3xl md:text-5xl font-serif font-bold text-slate-900 dark:text-white leading-tight">
+                    {guidance.reflectionTitle || "For your seeker's heart..."}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="max-w-3xl mx-auto py-4 relative z-10">
+                <p className="text-xl md:text-3xl font-serif text-slate-700 dark:text-slate-200 leading-[1.6] italic">
+                  "{guidance.aiSummary}"
+                </p>
+              </div>
+
+              {/* Specific Guidance References */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto relative z-10">
+                {/* Quran Guidance Card */}
+                <motion.div 
+                  whileHover={{ y: -6 }}
+                  className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2rem] border border-islamic-green/10 text-left space-y-6 shadow-premium group"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-islamic-green animate-pulse" />
+                    <span className="text-[10px] font-bold text-islamic-green uppercase tracking-widest">In the Qur'an</span>
+                  </div>
+                  <p className="font-arabic text-right text-2xl leading-relaxed line-clamp-3 text-slate-900 dark:text-white">{guidance.quranReference.text}</p>
+                  <p className="text-[15px] italic text-slate-600 dark:text-slate-400 font-serif leading-relaxed">"{guidance.quranReference.translation}"</p>
+                  <div className="pt-4 border-t border-slate-50 dark:border-white/5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                       <BookOpen className="w-3 h-3" />
+                       {guidance.quranReference.reference}
                     </p>
-                    
-                    <div className="space-y-6">
-                      <p className="translation-text text-lg italic border-l-2 border-islamic-green/20 pl-6 dark:text-slate-200">
-                        "{r.english.length > 250 ? r.english.substring(0, 250) + '...' : r.english}"
+                  </div>
+                </motion.div>
+
+                {/* Hadith Guidance Card */}
+                <motion.div 
+                  whileHover={{ y: -6 }}
+                  className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-[2rem] border border-islamic-gold/10 text-left space-y-6 shadow-premium group"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-islamic-gold animate-pulse" />
+                    <span className="text-[10px] font-bold text-islamic-gold uppercase tracking-widest">Prophetic Wisdom</span>
+                  </div>
+                  <p className="font-arabic text-right text-2xl leading-relaxed line-clamp-3 text-slate-900 dark:text-white">{guidance.hadithReference.text}</p>
+                  <p className="text-[15px] italic text-slate-600 dark:text-slate-400 font-serif leading-relaxed">"{guidance.hadithReference.translation}"</p>
+                  <div className="pt-4 border-t border-slate-50 dark:border-white/5">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                       <Lightbulb className="w-3 h-3" />
+                       {guidance.hadithReference.reference}
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-3 relative z-10 pt-4">
+                {guidance.suggestedThemes?.map((theme, i) => (
+                  <motion.span 
+                    key={i} 
+                    whileHover={{ scale: 1.05 }}
+                    className="px-5 py-2.5 bg-white dark:bg-white/5 rounded-2xl text-[11px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-widest shadow-sm border border-slate-100 dark:border-white/5"
+                  >
+                    {theme}
+                  </motion.span>
+                ))}
+              </div>
+              
+              <div className="pt-8 relative z-10">
+                <div className="h-px w-24 bg-slate-200 dark:bg-white/10 mx-auto mb-8" />
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mb-6">Continue your journey:</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {guidance.followUpQuestions?.slice(0, 3).map((q, i) => (
+                    <motion.button 
+                      key={i}
+                      whileHover={{ y: -2, backgroundColor: 'rgba(16, 185, 129, 0.1)' }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => onSearch(q)}
+                      className="px-8 py-3.5 bg-white dark:bg-slate-800 hover:text-islamic-green transition-all rounded-2xl text-[12px] font-bold text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-800 shadow-sm"
+                    >
+                      {q}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Direct References Section */}
+          <div className="space-y-12">
+            <div className="flex items-center gap-4 px-4">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Direct References</span>
+              <div className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {results.length > 0 ? (
+                results.map((r, idx) => (
+                  <motion.div
+                    key={r.id || idx}
+                    initial={{ opacity: 0, y: 30, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 1, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    whileHover={{ y: -6 }}
+                    onClick={() => onSelectResult(r)}
+                    className="group bg-white dark:bg-slate-900/40 rounded-[2rem] p-8 md:p-10 hover:border-islamic-green/30 transition-all cursor-pointer shadow-premium border border-slate-100 dark:border-white/5 flex flex-col justify-between"
+                  >
+                    <div className="space-y-8 h-full">
+                       <div className="flex justify-between items-start">
+                          <div className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm ${r.type === 'verse' ? 'bg-islamic-green/5 text-islamic-green' : 'bg-islamic-gold/10 text-islamic-gold'}`}>
+                            {r.type}
+                          </div>
+                          <motion.div 
+                            whileHover={{ rotate: 90 }}
+                            className="bg-slate-50 dark:bg-slate-800 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Sparkles className="w-4 h-4 text-islamic-gold" />
+                          </motion.div>
+                       </div>
+
+                      <p className="font-arabic text-right text-2xl md:text-3xl leading-relaxed line-clamp-3 text-slate-900 dark:text-white">
+                        {r.arabic}
                       </p>
-                      <p className="urdu-text text-right opacity-60">
-                         {r.urdu.length > 150 ? r.urdu.substring(0, 150) + '...' : r.urdu}
+                      
+                      <div className="space-y-4">
+                        <p className="font-serif text-[16px] leading-relaxed dark:text-slate-300 line-clamp-4 italic text-slate-600 font-medium">
+                          "{r.english}"
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-6">
+                      <p className="font-urdu text-right text-[19px] md:text-[22px] leading-relaxed opacity-70 line-clamp-2 text-slate-500 dark:text-slate-400">
+                         {r.urdu}
                       </p>
                     </div>
 
-                    <div className="pt-8 border-t border-slate-50 dark:border-white/5 flex items-center justify-between">
+                    <div className="pt-8 mt-8 border-t border-slate-50 dark:border-white/5 flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Source Reference</span>
-                        <span className="text-xs font-bold text-slate-900 dark:text-white">
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 opacity-50">Sacred Source</span>
+                        <span className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                           <Book className="w-3.5 h-3.5 text-islamic-green/40" />
                            {r.type === 'verse' ? `${r.surahName} ${r.surahNumber}:${r.ayahNumber}` : r.reference}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-3">
-                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-full border border-islamic-green/10">
-                            <div className="w-1 h-1 rounded-full bg-islamic-gold animate-pulse" />
-                            <span className="text-[10px] font-bold text-islamic-green dark:text-emerald-400 capitalize tracking-wider">{r.type}</span>
-                         </div>
-                         <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full group-hover:bg-islamic-green group-hover:text-white transition-all">
-                            <ChevronRight className="w-5 h-5" />
-                         </div>
-                      </div>
+                      <motion.div 
+                        whileHover={{ scale: 1.1 }}
+                        className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl group-hover:bg-islamic-green group-hover:text-white transition-all shadow-sm"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </motion.div>
                     </div>
-                  </div>
-                  
-                  {/* Background Accents */}
-                   <div className="absolute top-0 right-0 p-8 opacity-0 group-hover:opacity-[0.03] dark:group-hover:opacity-[0.08] transition-opacity pointer-events-none">
-                    <Sparkles className="w-32 h-32 rotate-12" />
-                  </div>
-                </motion.div>
-              ))
-            ) : (
-              <div className="text-center py-32 bg-slate-100/50 dark:bg-white/5 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/10">
-                <p className="text-slate-400 font-serif italic text-xl">No celestial echoes found for this query.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Sidebar Guidance */}
-          <div className="lg:col-span-4 space-y-8">
-            <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] pl-2 flex items-center gap-2">
-              <Lightbulb className="w-4 h-4 text-islamic-gold" />
-              Sacred Context
-            </h3>
-
-            {guidance ? (
-              <motion.div 
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-islamic-gold/20 rounded-[2.5rem] p-8 shadow-premium space-y-8 sticky top-24"
-              >
-                <div className="p-4 bg-islamic-gold/5 dark:bg-amber-500/10 rounded-[1.5rem] border border-islamic-gold/10">
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                    Understanding the Light
-                  </h4>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 italic font-serif leading-relaxed line-clamp-4">
-                    {guidance.aiSummary}
-                  </p>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-40 border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[4rem]">
+                  <p className="text-slate-400 font-serif italic text-2xl">Seeking the echoes of truth...</p>
                 </div>
-
-                <div className="space-y-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] block px-1">Themes Detected</span>
-                  <div className="flex flex-wrap gap-2">
-                    {guidance.suggestedThemes.map((theme, i) => (
-                      <span key={i} className="px-3 py-1.5 bg-slate-50 dark:bg-white/5 rounded-xl text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest border border-slate-100 dark:border-white/5">
-                        {theme}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] block px-1">Refining Guidance</span>
-                   <div className="space-y-2">
-                      {guidance.followUpQuestions.map((q, i) => (
-                         <button 
-                          key={i}
-                          onClick={() => onSearch(q)}
-                          className="w-full text-left p-3 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-islamic-green dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-slate-100 dark:hover:border-white/10"
-                        >
-                           {q}
-                         </button>
-                      ))}
-                   </div>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="p-8 text-center bg-slate-50 dark:bg-white/5 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-white/10">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Waiting for AI Insight...</p>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

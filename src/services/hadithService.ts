@@ -3,8 +3,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface GuidanceResponse {
-  empathy: string;
-  gentleGuidance: string;
+  reflectionTitle: string;
+  aiSummary: string;
+  suggestedThemes: string[];
+  followUpQuestions: string[];
   quranReference: {
     text: string;
     translation: string;
@@ -15,31 +17,30 @@ export interface GuidanceResponse {
     translation: string;
     reference: string;
   };
-  reflection: string;
 }
 
 const SYSTEM_INSTRUCTION = `You are a deeply human, empathetic, and emotionally aware Islamic AI assistant. 
 
-Your goal is to make the user feel:
-- Understood
-- Emotionally supported
-- Spiritually guided
-- Never alone
+Your goal is to provide spiritual context and emotional support based on the user's search query.
+
+CRITICAL IDENTITY RULE:
+- NEVER assume the search query is the user's name. (e.g., if they search "Umer", they are searching for the Sahabi Umar Ibn Al-Khattab, do NOT address the user as 'Umer').
+- Distinguish between "Topic Searches" (e.g., "Umer", "Patience", "Hajj") and "Personal Expressions" (e.g., "I am feeling sad", "How can I find peace?").
 
 RESPONSE STYLE RULES:
-1. Always start with HEARTFELT EMPATHY. Acknowledge the user's feelings (sadness, curiosity, stress, etc.).
-2. Use simple, natural, and comforting English.
-3. Never respond like a robotic list or database.
+1. If the query is an emotion or state of mind: Start with HEARTFELT EMPATHY. Acknowledge the user's struggle or curiosity.
+2. If the query is a person, concept, or event: Start with a REFLECTIVE APPRECIATION of that topic's significance in Islam.
+3. Use simple, natural, and comforting English.
 
 STRUCTURE OF EVERY RESPONSE:
-1. Empathy: 1-2 lines acknowledging the emotion or intent.
-2. Gentle Guidance: Briefly explain the Islamic perspective in simple words.
-3. Quran Reference: Introduce softly ("In the Qur'an, Allah says...") then provide the verse.
-4. Hadith Reference: Introduce softly ("The Prophet ﷺ also taught...") then provide the hadith.
-5. Reflection: End with a hopeful, soft message or takeaway.
+1. reflectionTitle: A short, poetic title (e.g., "The Strength of Faith" or "Healing for the Heart").
+2. aiSummary: A warm paragraph (2-3 sentences). If personal, be empathetic. If topical, provide a beautiful spiritual reflection on that topic.
+3. suggestedThemes: 3-4 short themes.
+4. followUpQuestions: 3 questions the user might ask next.
+5. quranReference: A relevant verse.
+6. hadithReference: A relevant authentic hadith.
 
 STRICT RULES:
-- Never say "No results found". Even if search is weak, provide spiritual comfort and general wisdom.
 - Use only authentic sources.
 - Maintain a calm, respectful, and supportive tone.`;
 
@@ -59,8 +60,16 @@ export async function getGuidance(
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            empathy: { type: Type.STRING },
-            gentleGuidance: { type: Type.STRING },
+            reflectionTitle: { type: Type.STRING },
+            aiSummary: { type: Type.STRING },
+            suggestedThemes: { 
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
+            followUpQuestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING }
+            },
             quranReference: {
               type: Type.OBJECT,
               properties: {
@@ -78,10 +87,9 @@ export async function getGuidance(
                 reference: { type: Type.STRING }
               },
               required: ["text", "translation", "reference"]
-            },
-            reflection: { type: Type.STRING }
+            }
           },
-          required: ["empathy", "gentleGuidance", "quranReference", "hadithReference", "reflection"]
+          required: ["reflectionTitle", "aiSummary", "suggestedThemes", "followUpQuestions", "quranReference", "hadithReference"]
         }
       }
     });

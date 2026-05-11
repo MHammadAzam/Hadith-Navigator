@@ -1,6 +1,6 @@
 {
-  "name": "Sihah-e-Sitta Hadith App",
-  "description": "A modern, production-grade Hadith application featuring the six authentic books with Arabic text, translations (Urdu/English), and AI-powered explanations and semantic search.",
+  "name": "Islamic Guidance",
+  "description": "A premium, emotionally supportive Islamic companion for searching topics across the Qur'an and authentic Hadith datasets with AI-powered guidance.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

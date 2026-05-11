@@ -26,7 +26,7 @@ import {
   SearchItem
 } from './types';
 import { MOCK_HADITHS, MOCK_VERSES } from './constants';
-import { Search } from 'lucide-react';
+import { Search, Clock, Trash2, Sparkles, BookOpen } from 'lucide-react';
 
 // Components
 import { Header } from './components/Header';
@@ -36,15 +36,10 @@ import { VerseDetail } from './components/VerseDetail';
 import { BookmarkList } from './components/BookmarkList';
 import { SettingsOverlay } from './components/SettingsOverlay';
 import { DailyAyahCard } from './components/DailyAyahCard';
-import { MoodSelector } from './components/MoodSelector';
-import { BookGrid } from './components/BookGrid';
-import { ChapterList } from './components/ChapterList';
-import { HadithList } from './components/HadithList';
 
 // Constants
-import { MOCK_HADITHS, MOCK_VERSES, MOCK_CHAPTERS, SIHAH_E_SITTA } from './constants';
+import { MOCK_HADITHS, MOCK_VERSES } from './constants';
 import { DAILY_VERSES } from './data/dailyVerses';
-import { Sparkles } from 'lucide-react';
 import { getGuidance } from './services/hadithService';
 import { GuidanceResponse } from './types';
 
@@ -52,6 +47,15 @@ const THEME_STORAGE_KEY = 'hadith_app_theme';
 const STREAK_STORAGE_KEY = 'hadith_app_streak';
 const LAST_ACTIVE_DATE_KEY = 'hadith_app_last_active';
 const DAILY_REFLECTION_STORAGE_PREFIX = 'daily_reflection_';
+const SEARCH_HISTORY_KEY = 'hadith_app_search_history';
+
+const RECOMMENDED_QUERIES = [
+  "How to be a better Muslim?",
+  "Feeling unmotivated",
+  "Dealing with loss",
+  "Finding inner peace",
+  "Patience during trials"
+];
 
 export default function App() {
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
@@ -79,9 +83,28 @@ export default function App() {
   const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
   const [similarItems, setSimilarItems] = useState<SimilarItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
+  });
   const [dailyReflection, setDailyReflection] = useState<string | undefined>();
   const explanationCache = useRef<Record<string, AIExplanation>>({});
   const similarItemsCache = useRef<Record<string, SimilarItem[]>>({});
+
+  // Search History Logic
+  const addToHistory = (query: string) => {
+    if (!query.trim()) return;
+    setSearchHistory(prev => {
+      const filtered = prev.filter(q => q !== query);
+      const updated = [query, ...filtered].slice(0, 10);
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem(SEARCH_HISTORY_KEY);
+  };
 
   // Item of the Day - Stable based on date string
   const ayahOfTheDay = useMemo(() => {
@@ -275,7 +298,9 @@ export default function App() {
   };
 
   const handleSearch = async (queryStr: string) => {
+    if (!queryStr.trim()) return;
     setSearchQuery(queryStr);
+    addToHistory(queryStr);
     setSearchGuidance(null);
     navigateTo('searchResult');
     
@@ -290,8 +315,19 @@ export default function App() {
       const guidance = await getGuidance(queryStr, state.language);
       setSearchGuidance(guidance);
 
-      const prompt = `Search Qur'an & Sahih Hadiths for: "${queryStr}". Return 5 relevant entries as JSON array.
-      Fields: type(verse|hadith), id, reference, arabic, english, urdu, bookName, bookId, surahName, surahNumber, ayahNumber, hadithNumber, relevanceScore.`;
+      const prompt = `Search the Qur'an and Sahih Hadith collections for: "${queryStr}". 
+      Return exactly 5 relevant entries as a JSON array. 
+      IMPORTANT: Try to include BOTH Qur'an verses and authentic Hadiths if relevant to the topic.
+      For each entry:
+      - type: must be either 'verse' or 'hadith' (lowercase)
+      - id: a unique string ID
+      - reference: full source reference (e.g., "Surah Al-Baqarah 2:153" or "Sahih Bukhari 123")
+      - arabic: the original Arabic text
+      - english: English translation
+      - urdu: Urdu translation
+      - bookName/bookId: for hadiths (e.g. "Sahih Bukhari", "bukhari")
+      - surahName/surahNumber/ayahNumber: for verses
+      - hadithNumber: for hadiths`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -323,7 +359,10 @@ export default function App() {
         }
       });
       
-      const results = JSON.parse(response.text);
+      const results: SearchItem[] = JSON.parse(response.text).map((item: any) => ({
+        ...item,
+        type: item.type?.toLowerCase() === 'verse' ? 'verse' : 'hadith'
+      }));
       setSearchResults(results || []);
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : "Search failed.");
@@ -474,7 +513,7 @@ export default function App() {
         streak={streak}
       />
 
-      <main className="pb-20">
+      <main className="pb-20" style={{ '--content-font-size': `${state.fontSize}px` } as React.CSSProperties}>
         <AnimatePresence mode="wait">
           {state.view === 'home' && (
             <motion.section 
@@ -482,82 +521,109 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="max-w-7xl mx-auto"
+              className="max-w-7xl mx-auto px-4"
             >
-              <div className="pt-32 pb-16 px-4 text-center space-y-6">
-                <h2 className="text-4xl md:text-6xl font-serif font-bold text-slate-900 dark:text-white">Islamic Guidance</h2>
-                <p className="text-slate-500 dark:text-slate-400 max-w-2xl mx-auto text-lg italic font-serif">"Seek wisdom from the Qur'an and authentic Sunnah."</p>
+              <div className="pt-32 pb-4 flex flex-col items-center justify-center text-center px-4">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                  className="space-y-[8px] mb-[16px]"
+                >
+                  <h2 className="text-[32px] md:text-[40px] font-bold text-slate-900 dark:text-white tracking-tight font-serif italic">
+                    Islamic <span className="text-islamic-green not-italic">Guidance</span>
+                  </h2>
+                  <p className="text-slate-500 dark:text-slate-400 max-w-[80%] mx-auto text-sm md:text-base font-medium leading-relaxed opacity-70">
+                    Find answers from the Qur'an and authentic Hadith
+                  </p>
+                </motion.div>
                 
-                <div className="max-w-2xl mx-auto pt-8">
-                  <div className="relative group">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ delay: 0.2, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                  className="w-full max-w-2xl space-y-6"
+                >
+                  <div className="relative group mx-auto w-[92%] md:w-full">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-islamic-green/10 via-islamic-gold/5 to-islamic-green/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition duration-700"></div>
                     <input 
                       type="text"
-                      placeholder="Ask any question about life, faith, or guidance..."
-                      className="w-full h-18 pl-14 pr-6 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 focus:border-islamic-green focus:ring-4 focus:ring-islamic-green/5 transition-all text-lg shadow-premium outline-none"
+                      placeholder="Ask for guidance... e.g. feeling unmotivated, finding peace"
+                      className="relative w-full h-14 pl-14 pr-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 transition-all text-[16px] shadow-premium outline-none text-slate-800 dark:text-white focus:ring-[8px] focus:ring-islamic-green/5 focus:border-islamic-green/30 placeholder:text-slate-300"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           handleSearch((e.target as HTMLInputElement).value);
                         }
                       }}
                     />
-                    <Sparkles className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-islamic-gold animate-pulse" />
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-islamic-green transition-colors" />
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                       <Sparkles className="w-4 h-4 text-islamic-gold opacity-30 pointer-events-none animate-pulse" />
+                    </div>
                   </div>
+
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="flex flex-col items-center gap-4"
+                  >
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                       {(searchHistory.length > 0 ? searchHistory.slice(0, 3) : RECOMMENDED_QUERIES.slice(0, 3)).map((h, i) => (
+                         <motion.button 
+                          key={i}
+                          whileHover={{ y: -2, backgroundColor: 'rgba(16, 185, 129, 0.05)' }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleSearch(h)}
+                          className="px-5 py-2 bg-white dark:bg-slate-900 text-slate-400 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all border border-slate-100 dark:border-white/5 shadow-sm"
+                         >
+                           {h}
+                         </motion.button>
+                       ))}
+                    </div>
+                    {searchHistory.length === 0 && (
+                      <div className="flex flex-wrap items-center justify-center gap-2 opacity-60">
+                         {RECOMMENDED_QUERIES.slice(3, 5).map((h, i) => (
+                           <motion.button 
+                            key={i}
+                            whileHover={{ y: -2, backgroundColor: 'rgba(16, 185, 129, 0.05)' }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleSearch(h)}
+                            className="px-5 py-2 bg-white/50 dark:bg-slate-900/50 text-slate-400 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border border-slate-100 dark:border-white/5 shadow-sm"
+                           >
+                             {h}
+                           </motion.button>
+                         ))}
+                      </div>
+                    )}
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              <div className="max-w-5xl mx-auto pb-40">
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="flex items-center gap-6 mb-12 px-6"
+                >
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Heavenly Insight</span>
+                    <Sparkles className="w-3 h-3 text-islamic-gold mt-2 opacity-30" />
+                  </div>
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
+                </motion.div>
+                <div className="px-4">
+                  <DailyAyahCard 
+                    verse={ayahOfTheDay}
+                    reflection={dailyReflection}
+                    isBookmarked={bookmarks.some(b => b.id === ayahOfTheDay.id)}
+                    onToggleBookmark={() => toggleBookmark(ayahOfTheDay, 'verse')}
+                    onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
+                  />
                 </div>
               </div>
-
-              <div className="px-4 space-y-24 mb-20">
-                <DailyAyahCard 
-                  verse={ayahOfTheDay}
-                  reflection={dailyReflection}
-                  isBookmarked={bookmarks.some(b => b.id === ayahOfTheDay.id)}
-                  onToggleBookmark={() => toggleBookmark(ayahOfTheDay, 'verse')}
-                  onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
-                />
-
-                <MoodSelector onMoodSelect={handleSearch} />
-
-                <BookGrid 
-                  books={SIHAH_E_SITTA} 
-                  onSelectBook={(book) => navigateTo('book', { selectedBook: book })} 
-                />
-              </div>
-            </motion.section>
-          )}
-
-          {state.view === 'book' && state.selectedBook && (
-            <motion.section
-              key="book"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="pt-24"
-            >
-              <ChapterList 
-                book={state.selectedBook}
-                chapters={MOCK_CHAPTERS.filter(c => c.bookId === state.selectedBook?.id)}
-                onSelectChapter={(chapter) => navigateTo('hadithList', { selectedChapter: chapter })}
-                onBack={() => navigateTo('home')}
-              />
-            </motion.section>
-          )}
-
-          {state.view === 'hadithList' && state.selectedBook && state.selectedChapter && (
-             <motion.section
-              key="hadithList"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="pt-24"
-            >
-              <HadithList 
-                book={state.selectedBook}
-                chapter={state.selectedChapter}
-                hadiths={MOCK_HADITHS.filter(h => h.bookId === state.selectedBook?.id && h.chapterId === state.selectedChapter?.id)}
-                isBookmarked={(id) => bookmarks.some(b => b.id === id)}
-                onToggleBookmark={(h) => toggleBookmark(h, 'hadith')}
-                onSelectHadith={(hadith) => navigateTo('hadithDetail', { selectedHadith: hadith })}
-                onBack={() => navigateTo('book')}
-              />
             </motion.section>
           )}
 

@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-6 pointer-events-none">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 pointer-events-auto">
+      <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
         {/* Logo */}
         <motion.div 
           onClick={onHome}
@@ -42,76 +42,75 @@ export const Header: React.FC<HeaderProps> = ({
           whileTap={{ scale: 0.95 }}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-12 h-12 bg-islamic-green dark:bg-emerald-600 rounded-2xl flex items-center justify-center shadow-[0_12px_24px_-8px_rgba(2,44,34,0.4)] group-hover:shadow-[0_16px_32px_-8px_rgba(2,44,34,0.5)] transition-all overflow-hidden relative border border-white/10">
-            <span className="text-white font-serif text-2xl font-bold relative z-10 italic">G</span>
-            <div className="absolute inset-0 bg-gradient-to-tr from-black/20 to-transparent pointer-events-none" />
+          <div className="w-10 h-10 bg-islamic-green dark:bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg transition-all relative overflow-hidden border border-white/10">
+            <span className="text-white font-serif text-xl font-bold italic">IG</span>
           </div>
           <div className="hidden md:block">
-            <h1 className="font-serif text-sm font-bold text-slate-900 dark:text-white leading-tight">Sacred</h1>
-            <p className="text-[9px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-[0.2em] opacity-80">Guidance AI</p>
+            <h1 className="font-serif text-sm font-bold text-slate-900 dark:text-white leading-tight">Islamic Guidance</h1>
+            <p className="text-[8px] font-bold text-islamic-green dark:text-emerald-400 uppercase tracking-[0.2em] opacity-80">Sacred Wisdom Companion</p>
           </div>
         </motion.div>
 
-        {/* Dynamic Navigation Bar (Apple Style) */}
-        <div className="flex items-center gap-1 p-1.5 glass-effect rounded-[2rem] shadow-premium">
-          <div className="flex items-center gap-1 px-1">
-             <button 
-              onClick={onOpenBookmarks}
-              className="p-3 text-slate-500 hover:text-islamic-green dark:text-slate-400 dark:hover:text-emerald-400 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all relative group"
-            >
-              <Bookmark className="w-4 h-4" />
-              <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-islamic-gold rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-
-            <button 
-              onClick={onOpenSettings}
-              className="p-3 text-slate-500 hover:text-islamic-green dark:text-slate-400 dark:hover:text-emerald-400 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-
-            <div className="w-px h-4 bg-slate-100 dark:bg-slate-800/50 mx-2" />
-
-            <button 
-              onClick={toggleTheme}
-              className="p-3 text-slate-500 hover:text-islamic-green dark:text-slate-400 dark:hover:text-emerald-400 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          </div>
-
+        {/* Dynamic Navigation Bar (Minimal) */}
+        <div className="flex items-center gap-1 p-1.5 glass-effect rounded-2xl shadow-premium border border-white/50 dark:border-white/5 backdrop-blur-md">
           {streak > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-2 bg-islamic-gold/10 text-islamic-gold rounded-full transition-all">
-              <Zap className="w-3.5 h-3.5 fill-current" />
-              <span className="text-[10px] font-bold tracking-tighter">{streak}</span>
-            </div>
+            <motion.div 
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="px-3 py-1.5 bg-islamic-gold/10 rounded-xl flex items-center gap-2 mr-1 border border-islamic-gold/20"
+            >
+              <Zap className="w-3.5 h-3.5 text-islamic-gold fill-current animate-pulse" />
+              <span className="text-[10px] font-bold text-islamic-gold">{streak}</span>
+            </motion.div>
           )}
 
+          <motion.button 
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onOpenBookmarks}
+            className="p-2.5 text-slate-500 hover:text-islamic-green dark:text-slate-400 dark:hover:text-emerald-400 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition-all shadow-sm flex items-center justify-center"
+            title="Bookmarks"
+          >
+            <Bookmark className="w-4 h-4" />
+          </motion.button>
+
+          <motion.button 
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={toggleTheme}
+            className="p-2.5 text-slate-500 hover:text-islamic-green dark:text-slate-400 dark:hover:text-emerald-400 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition-all shadow-sm flex items-center justify-center"
+            title="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </motion.button>
+
+          <motion.button 
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onOpenSettings}
+            className="p-2.5 text-slate-500 hover:text-islamic-green dark:text-slate-400 dark:hover:text-emerald-400 rounded-xl hover:bg-white dark:hover:bg-slate-800 transition-all shadow-sm flex items-center justify-center"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </motion.button>
+
           {user ? (
-            <div className="flex items-center gap-1 pl-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-islamic-green/10">
-                 {user.photoURL ? (
-                    <img src={user.photoURL} alt="User" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                 ) : (
-                    <div className="w-full h-full bg-islamic-green/5 flex items-center justify-center text-[10px] font-bold text-islamic-green">
-                      {user.displayName?.[0] || user.email?.[0]}
-                    </div>
-                 )}
-              </div>
-              <button 
+            <div className="flex items-center gap-1 ml-1 pl-2 border-l border-slate-200 dark:border-slate-800">
+               <motion.button 
+                whileTap={{ scale: 0.9 }}
                 onClick={() => signOut(auth)}
-                className="p-2.5 text-slate-400 hover:text-red-500 transition-colors"
+                className="p-2.5 text-slate-400 hover:text-red-500 transition-colors rounded-xl flex items-center justify-center"
                 title="Logout"
               >
-                <LogOut className="w-4 h-4" />
-              </button>
+                <LogOut className="w-3.5 h-3.5" />
+              </motion.button>
             </div>
           ) : (
             <motion.button 
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={signInWithGoogle}
-              className="px-5 py-2.5 bg-islamic-green text-white text-[10px] font-bold uppercase tracking-[0.2em] rounded-full hover:bg-emerald-700 transition-all shadow-lg shadow-islamic-green/20 ml-2"
+              className="px-5 py-2 bg-islamic-green text-white text-[9px] font-bold uppercase tracking-[0.2em] rounded-xl hover:bg-emerald-700 transition-all ml-1 shadow-lg shadow-islamic-green/20"
             >
               Sign In
             </motion.button>

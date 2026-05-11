@@ -125,10 +125,10 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
         <section className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl space-y-4 border border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             <Info className="w-3.5 h-3.5" />
-            About Sihah-e-Sitta App
+            About Islamic Guidance
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            This application provides access to the six authentic Hadith collections (Kutub al-Sittah). The AI explanation feature uses advanced models for educational context but should be verified with established scholars.
+            This application provides access to the Qur'an and authentic Hadith collections. The AI guidance features are designed to provide spiritual reflection and context but should always be considered secondary to established authentic sources.
           </p>
         </section>
       </div>

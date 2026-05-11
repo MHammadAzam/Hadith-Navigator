@@ -25,14 +25,14 @@
 @layer base {
   .arabic-text {
     @apply font-arabic leading-[1.8] text-slate-900 dark:text-slate-100;
-    font-size: clamp(26px, 6vw, 36px);
+    font-size: calc(var(--content-font-size, 18px) * 1.8);
     direction: rtl;
     @apply tracking-normal transition-all duration-300;
   }
 
   .translation-text {
     @apply text-slate-600 dark:text-slate-300 font-serif leading-relaxed;
-    font-size: clamp(16px, 4vw, 18px);
+    font-size: var(--content-font-size, 18px);
   }
 
   .reference-text {

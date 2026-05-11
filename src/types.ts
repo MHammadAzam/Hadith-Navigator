@@ -66,8 +66,10 @@ export interface SavedItem {
 }
 
 export interface GuidanceResponse {
-  empathy: string;
-  gentleGuidance: string;
+  reflectionTitle: string;
+  aiSummary: string;
+  suggestedThemes: string[];
+  followUpQuestions: string[];
   quranReference: {
     text: string;
     translation: string;
@@ -78,7 +80,6 @@ export interface GuidanceResponse {
     translation: string;
     reference: string;
   };
-  reflection: string;
 }
 
 export type AppView = 'home' | 'book' | 'hadithList' | 'hadithDetail' | 'verseDetail' | 'bookmarks' | 'settings' | 'searchResult';
