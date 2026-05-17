@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Save, Share2, Info, Book, Quote, Download, ChevronRight, BookOpen } from 'lucide-react';
+import { Sparkles, Save, Share2, Info, Book, Quote, Download, ChevronRight, BookOpen, Languages } from 'lucide-react';
 import { QuranVerse } from '../types';
 import { toPng } from 'html-to-image';
 import { AudioRecitation } from './AudioRecitation';
@@ -21,24 +21,32 @@ export const DailyAyahCard: React.FC<DailyAyahCardProps> = ({
   onViewDetail
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const arabicRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [showShareOptions, setShowShareOptions] = useState(false);
 
-  const handleShareImage = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!cardRef.current) return;
+  const handleShareImage = async (type: 'full' | 'arabic') => {
+    const element = type === 'full' ? cardRef.current : arabicRef.current;
+    if (!element) return;
     
     setIsSharing(true);
+    setShowShareOptions(false);
     try {
-      const dataUrl = await toPng(cardRef.current, { 
+      const dataUrl = await toPng(element, { 
         cacheBust: true,
-        backgroundColor: '#fdfbf7', // parchment
+        backgroundColor: '#ffffff',
         style: {
-          padding: '48px',
-          borderRadius: '0px' 
+          padding: type === 'full' ? '48px' : '64px',
+          borderRadius: '0px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'white'
         }
       });
       const link = document.createElement('a');
-      link.download = `Ayah-of-the-day-${verse.reference}.png`;
+      link.download = `${type === 'full' ? 'Ayah-Card' : 'Ayah-Arabic'}-${verse.reference}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -105,7 +113,7 @@ export const DailyAyahCard: React.FC<DailyAyahCardProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-             <div className="flex bg-slate-50/50 dark:bg-slate-800/30 p-1.5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50 backdrop-blur-sm">
+             <div className="flex bg-slate-50/50 dark:bg-slate-800/30 p-1.5 rounded-2xl border border-slate-100/50 dark:border-slate-800/50 backdrop-blur-sm relative">
                <motion.button 
                 whileTap={{ scale: 0.9 }}
                 onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
@@ -114,15 +122,48 @@ export const DailyAyahCard: React.FC<DailyAyahCardProps> = ({
               >
                 <Save className={`w-4 h-4 ${isBookmarked ? 'fill-current' : ''}`} />
               </motion.button>
-               <motion.button 
-                whileTap={{ scale: 0.9 }}
-                onClick={handleShareImage}
-                disabled={isSharing}
-                className="p-2.5 text-slate-400 hover:text-islamic-green hover:bg-white dark:hover:bg-slate-700 rounded-xl transition-all"
-                title="Download Card"
-              >
-                <Download className="w-4 h-4" />
-              </motion.button>
+              
+              <div className="relative">
+                <motion.button 
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => { e.stopPropagation(); setShowShareOptions(!showShareOptions); }}
+                  disabled={isSharing}
+                  className={`p-2.5 rounded-xl transition-all ${showShareOptions ? 'bg-islamic-green text-white' : 'text-slate-400 hover:text-islamic-green hover:bg-white dark:hover:bg-slate-700'}`}
+                  title="Share Options"
+                >
+                  <Share2 className="w-4 h-4" />
+                </motion.button>
+
+                {showShareOptions && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    className="absolute top-full right-0 mt-3 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-premium border border-slate-100 dark:border-white/5 z-50 overflow-hidden"
+                  >
+                    <button 
+                      onClick={() => handleShareImage('full')}
+                      className="w-full px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Full Card Image
+                    </button>
+                    <button 
+                      onClick={() => handleShareImage('arabic')}
+                      className="w-full px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 border-t border-slate-50 dark:border-white/5"
+                    >
+                      <Languages className="w-3.5 h-3.5" />
+                      Arabic Only Image
+                    </button>
+                    <button 
+                      onClick={(e) => { handleShareText(e); setShowShareOptions(false); }}
+                      className="w-full px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 border-t border-slate-50 dark:border-white/5"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      Copy as Text
+                    </button>
+                  </motion.div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -135,9 +176,11 @@ export const DailyAyahCard: React.FC<DailyAyahCardProps> = ({
             transition={{ delay: 0.3 }}
             className="relative inline-block mx-auto"
           >
-             <p className="font-arabic text-[26px] md:text-[32px] leading-[1.8] text-slate-900 dark:text-white font-medium cursor-pointer hover:text-islamic-green transition-colors" onClick={onViewDetail}>
-               {verse.arabicText}
-             </p>
+             <div ref={arabicRef} className="px-4 py-2">
+               <p className="font-arabic text-[26px] md:text-[32px] leading-[1.8] text-slate-900 dark:text-white font-medium cursor-pointer hover:text-islamic-green transition-colors" onClick={onViewDetail}>
+                 {verse.arabicText}
+               </p>
+             </div>
           </motion.div>
           
           <motion.div 

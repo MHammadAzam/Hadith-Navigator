@@ -75,6 +75,14 @@ export const SIHAH_E_SITTA: HadithBook[] = [
   }
 ];
 
+export const RECOMMENDED_QUERIES = [
+  "how to be a better Muslim",
+  "feeling unmotivated",
+  "dealing with loss",
+  "finding inner peace",
+  "patience during trials"
+];
+
 export const MOCK_VERSES: QuranVerse[] = [
   {
     id: 'verse-2-153',

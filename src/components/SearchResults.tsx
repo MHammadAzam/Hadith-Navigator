@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search,
   ArrowLeft,
@@ -10,7 +10,8 @@ import {
   Info,
   Lightbulb,
   BookOpen,
-  Book
+  Book,
+  Filter
 } from 'lucide-react';
 import { SearchItem, GuidanceResponse } from '../types';
 
@@ -23,9 +24,12 @@ interface SearchResultsProps {
   onBack: () => void;
   onSearch: (query: string) => void;
   error?: string | null;
+  searchHistory: string[];
 }
 
-export const SearchResults: React.FC<SearchResultsProps> = ({
+type FilterType = 'all' | 'verse' | 'hadith';
+
+export const SearchResults: React.FC<SearchResultsProps> = React.memo(({
   query,
   results,
   guidance,
@@ -33,56 +37,38 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onSelectResult,
   onBack,
   onSearch,
-  error
+  error,
+  searchHistory
 }) => {
+  const [filterType, setFilterType] = useState<FilterType>('all');
+  const [filterCollection, setFilterCollection] = useState<string>('all');
+
+  // Extract unique collections from results
+  const collections = useMemo(() => {
+    const set = new Set<string>();
+    results.forEach(r => {
+      if (r.type === 'hadith' && r.bookName) {
+        set.add(r.bookName);
+      } else if (r.type === 'verse' && r.surahName) {
+        set.add('Qur\'an');
+      }
+    });
+    return Array.from(set).sort();
+  }, [results]);
+
+  const filteredResults = useMemo(() => {
+    return results.filter(r => {
+      const matchesType = filterType === 'all' || r.type === filterType;
+      const matchesCollection = filterCollection === 'all' || 
+        (r.type === 'hadith' && r.bookName === filterCollection) ||
+        (r.type === 'verse' && filterCollection === 'Qur\'an');
+      return matchesType && matchesCollection;
+    });
+  }, [results, filterType, filterCollection]);
+
   return (
     <div className="max-w-5xl mx-auto py-12 px-4">
-      {/* Search Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-16"
-      >
-        <motion.button 
-          whileHover={{ x: -4 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onBack}
-          className="flex items-center gap-2 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group self-start"
-        >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="text-xs font-bold uppercase tracking-[0.2em]">Home</span>
-        </motion.button>
-
-        <div className="flex-1 max-w-xl">
-           <div className="relative group">
-              <input 
-                type="text"
-                defaultValue={query}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onSearch((e.target as HTMLInputElement).value);
-                }}
-                className="w-full h-14 pl-12 pr-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:border-islamic-green focus:ring-[6px] focus:ring-islamic-green/5 shadow-premium text-sm outline-none transition-all placeholder:text-slate-300"
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-islamic-green transition-colors" />
-           </div>
-        </div>
-      </motion.div>
-
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-48 text-slate-400 gap-8">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.6, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-24 h-24 bg-islamic-green/5 dark:bg-emerald-500/10 rounded-full flex items-center justify-center"
-          >
-            <Sparkles className="w-10 h-10 text-islamic-gold" />
-          </motion.div>
-          <div className="text-center space-y-3">
-            <p className="font-serif italic text-3xl dark:text-white">Seeking Wisdom...</p>
-            <p className="text-[10px] font-bold uppercase tracking-[0.5em] opacity-40">Connecting with Sacred Text</p>
-          </div>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-white/5 rounded-[3rem] p-16 text-center space-y-8 shadow-premium">
            <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto">
              <Info className="w-10 h-10" />
@@ -101,7 +87,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       ) : (
         <div className="space-y-20">
           {/* Supportive AI Guidance */}
-          {guidance && (
+          {guidance ? (
             <motion.div 
               initial={{ opacity: 0, y: 30, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -158,7 +144,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     <div className="w-1.5 h-1.5 rounded-full bg-islamic-green animate-pulse" />
                     <span className="text-[10px] font-bold text-islamic-green uppercase tracking-widest">In the Qur'an</span>
                   </div>
-                  <p className="font-arabic text-right text-2xl leading-relaxed line-clamp-3 text-slate-900 dark:text-white">{guidance.quranReference.text}</p>
+                  <p className="font-arabic text-right text-2xl leading-relaxed text-slate-900 dark:text-white">{guidance.quranReference.text}</p>
                   <p className="text-[15px] italic text-slate-600 dark:text-slate-400 font-serif leading-relaxed">"{guidance.quranReference.translation}"</p>
                   <div className="pt-4 border-t border-slate-50 dark:border-white/5">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -177,7 +163,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                     <div className="w-1.5 h-1.5 rounded-full bg-islamic-gold animate-pulse" />
                     <span className="text-[10px] font-bold text-islamic-gold uppercase tracking-widest">Prophetic Wisdom</span>
                   </div>
-                  <p className="font-arabic text-right text-2xl leading-relaxed line-clamp-3 text-slate-900 dark:text-white">{guidance.hadithReference.text}</p>
+                  <p className="font-arabic text-right text-2xl leading-relaxed text-slate-900 dark:text-white">{guidance.hadithReference.text}</p>
                   <p className="text-[15px] italic text-slate-600 dark:text-slate-400 font-serif leading-relaxed">"{guidance.hadithReference.translation}"</p>
                   <div className="pt-4 border-t border-slate-50 dark:border-white/5">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -218,18 +204,75 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 </div>
               </div>
             </motion.div>
+          ) : (
+            <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               className="bg-islamic-green/[0.01] dark:bg-emerald-500/[0.01] border border-dashed border-islamic-green/10 dark:border-emerald-500/10 rounded-[3rem] p-12 text-center"
+            >
+               <div className="flex flex-col items-center gap-4">
+                 <div className="relative">
+                   <div className="absolute inset-0 bg-islamic-gold/20 blur-xl rounded-full scale-110 animate-pulse" />
+                   <Sparkles className="w-8 h-8 text-islamic-gold relative animate-[spin_4s_linear_infinite]" />
+                 </div>
+                 <div className="space-y-1">
+                   <span className="text-[10px] font-bold text-islamic-green uppercase tracking-[0.5em] animate-pulse">Heavenly Insight</span>
+                   <p className="text-xs text-slate-400 font-medium">Seeking a spiritual reflection for your heart...</p>
+                 </div>
+               </div>
+            </motion.div>
           )}
 
           {/* Direct References Section */}
           <div className="space-y-12">
-            <div className="flex items-center gap-4 px-4">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Direct References</span>
-              <div className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-4">
+              <div className="flex items-center gap-4 flex-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.5em]">Direct References</span>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
+              </div>
+
+              {/* Filters UI */}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden shadow-inner">
+                  {(['all', 'verse', 'hadith'] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => {
+                        setFilterType(t);
+                        setFilterCollection('all');
+                      }}
+                      className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        filterType === t 
+                          ? 'bg-white dark:bg-slate-700 text-islamic-green shadow-sm' 
+                          : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                      }`}
+                    >
+                      {t === 'all' ? 'All' : t === 'verse' ? 'Verses' : 'Hadiths'}
+                    </button>
+                  ))}
+                </div>
+
+                {collections.length > 0 && (
+                  <div className="relative group">
+                    <select
+                      value={filterCollection}
+                      onChange={(e) => setFilterCollection(e.target.value)}
+                      className="appearance-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 px-4 py-2 pr-10 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-500 outline-none focus:ring-2 focus:ring-islamic-green/20 transition-all cursor-pointer shadow-premium"
+                    >
+                      <option value="all">All Sources</option>
+                      {collections.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <Filter className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {results.length > 0 ? (
-                results.map((r, idx) => (
+              {filteredResults.length > 0 ? (
+                filteredResults.map((r, idx) => (
                   <motion.div
                     key={r.id || idx}
                     initial={{ opacity: 0, y: 30, scale: 0.98 }}
@@ -271,7 +314,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
                     <div className="pt-8 mt-8 border-t border-slate-50 dark:border-white/5 flex items-center justify-between">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 opacity-50">Sacred Source</span>
+                        <span className="text-[10px] font-bold text-islamic-green uppercase tracking-[0.2em] mb-1 group-hover:animate-pulse">Tap for full authentic text</span>
                         <span className="text-[11px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
                            <Book className="w-3.5 h-3.5 text-islamic-green/40" />
                            {r.type === 'verse' ? `${r.surahName} ${r.surahNumber}:${r.ayahNumber}` : r.reference}
@@ -287,8 +330,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   </motion.div>
                 ))
               ) : (
-                <div className="col-span-full text-center py-40 border-2 border-dashed border-slate-100 dark:border-white/5 rounded-[4rem]">
-                  <p className="text-slate-400 font-serif italic text-2xl">Seeking the echoes of truth...</p>
+                <div className="col-span-full text-center py-20 bg-slate-50 dark:bg-slate-900/40 rounded-[3rem] border border-dashed border-slate-200 dark:border-white/10">
+                  <div className="mb-6">
+                    <Info className="w-10 h-10 text-islamic-gold/40 mx-auto" />
+                  </div>
+                  <h3 className="text-xl font-serif dark:text-white mb-2">No exact match found</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto">
+                    Showing related guidance based on your search. Try adjusting your filters or query.
+                  </p>
                 </div>
               )}
             </div>
@@ -297,4 +346,4 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       )}
     </div>
   );
-};
+});

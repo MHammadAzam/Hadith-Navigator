@@ -25,12 +25,13 @@ import {
   SimilarItem,
   SearchItem
 } from './types';
-import { MOCK_HADITHS, MOCK_VERSES } from './constants';
+import { MOCK_HADITHS, MOCK_VERSES, RECOMMENDED_QUERIES } from './constants';
 import { Search, Clock, Trash2, Sparkles, BookOpen } from 'lucide-react';
 
 // Components
 import { Header } from './components/Header';
 import { SearchResults } from './components/SearchResults';
+import { SearchSkeleton } from './components/SearchSkeleton';
 import { HadithDetail } from './components/HadithDetail';
 import { VerseDetail } from './components/VerseDetail';
 import { BookmarkList } from './components/BookmarkList';
@@ -38,7 +39,6 @@ import { SettingsOverlay } from './components/SettingsOverlay';
 import { DailyAyahCard } from './components/DailyAyahCard';
 
 // Constants
-import { MOCK_HADITHS, MOCK_VERSES } from './constants';
 import { DAILY_VERSES } from './data/dailyVerses';
 import { getGuidance } from './services/hadithService';
 import { GuidanceResponse } from './types';
@@ -48,14 +48,6 @@ const STREAK_STORAGE_KEY = 'hadith_app_streak';
 const LAST_ACTIVE_DATE_KEY = 'hadith_app_last_active';
 const DAILY_REFLECTION_STORAGE_PREFIX = 'daily_reflection_';
 const SEARCH_HISTORY_KEY = 'hadith_app_search_history';
-
-const RECOMMENDED_QUERIES = [
-  "How to be a better Muslim?",
-  "Feeling unmotivated",
-  "Dealing with loss",
-  "Finding inner peace",
-  "Patience during trials"
-];
 
 export default function App() {
   const ai = useMemo(() => new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }), []);
@@ -83,9 +75,14 @@ export default function App() {
   const [isLoadingSimilar, setIsLoadingSimilar] = useState(false);
   const [similarItems, setSimilarItems] = useState<SimilarItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchCache, setSearchCache] = useState<Record<string, { guidance: GuidanceResponse, results: SearchItem[] }>>({});
+  const latestSearchIdRef = useRef<number>(0);
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]');
   });
+  const [inputValue, setInputValue] = useState('');
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const [dailyReflection, setDailyReflection] = useState<string | undefined>();
   const explanationCache = useRef<Record<string, AIExplanation>>({});
   const similarItemsCache = useRef<Record<string, SimilarItem[]>>({});
@@ -105,6 +102,15 @@ export default function App() {
     setSearchHistory([]);
     localStorage.removeItem(SEARCH_HISTORY_KEY);
   };
+
+  const filteredSuggestions = useMemo(() => {
+    if (!inputValue.trim()) return [];
+    const combined = Array.from(new Set([...searchHistory, ...RECOMMENDED_QUERIES]));
+    return combined.filter(q => 
+      q.toLowerCase().includes(inputValue.toLowerCase()) && 
+      q.toLowerCase() !== inputValue.toLowerCase()
+    ).slice(0, 5);
+  }, [inputValue, searchHistory]);
 
   // Item of the Day - Stable based on date string
   const ayahOfTheDay = useMemo(() => {
@@ -219,7 +225,17 @@ export default function App() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map(doc => doc.data() as SavedItem);
+      const docs = snapshot.docs.map(doc => {
+        const raw = doc.data();
+        // Defensive mapping for legacy data structures
+        return {
+          id: raw.id || doc.id,
+          type: raw.type || raw.itemType || 'hadith',
+          data: raw.data || raw.itemData || {},
+          savedAt: raw.savedAt || Date.now(),
+          notes: raw.notes || ''
+        } as SavedItem;
+      }).filter(b => b.data && (b.data as any).arabicText); // Only show valid bookmarks with content
       setBookmarks(docs);
     });
 
@@ -297,41 +313,50 @@ export default function App() {
     }
   };
 
-  const handleSearch = async (queryStr: string) => {
-    if (!queryStr.trim()) return;
-    setSearchQuery(queryStr);
-    addToHistory(queryStr);
-    setSearchGuidance(null);
-    navigateTo('searchResult');
+  // Debounce search effect
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const performSearch = async (queryStr: string) => {
+    if (!queryStr.trim()) {
+      setIsSearchActive(false);
+      return;
+    }
+
+    // Check cache
+    if (searchCache[queryStr]) {
+      const cached = searchCache[queryStr];
+      setSearchGuidance(cached.guidance);
+      setSearchResults(cached.results);
+      setIsSearchActive(true);
+      return;
+    }
+
+    const currentSearchId = ++latestSearchIdRef.current;
     
     setIsLoadingSearch(true);
     setSearchError(null);
+    setSearchResults([]);
+    setSearchGuidance(null);
+    setIsSearchActive(true);
+    
     try {
       if (!process.env.GEMINI_API_KEY) {
         throw new Error("Gemini API key is missing.");
       }
 
-      // Get AI guidance
-      const guidance = await getGuidance(queryStr, state.language);
-      setSearchGuidance(guidance);
-
-      const prompt = `Search the Qur'an and Sahih Hadith collections for: "${queryStr}". 
-      Return exactly 5 relevant entries as a JSON array. 
-      IMPORTANT: Try to include BOTH Qur'an verses and authentic Hadiths if relevant to the topic.
-      For each entry:
-      - type: must be either 'verse' or 'hadith' (lowercase)
-      - id: a unique string ID
-      - reference: full source reference (e.g., "Surah Al-Baqarah 2:153" or "Sahih Bukhari 123")
-      - arabic: the original Arabic text
-      - english: English translation
-      - urdu: Urdu translation
-      - bookName/bookId: for hadiths (e.g. "Sahih Bukhari", "bukhari")
-      - surahName/surahNumber/ayahNumber: for verses
-      - hadithNumber: for hadiths`;
-
-      const response = await ai.models.generateContent({
+      // 1. Fetch Search Results First (Fastest part)
+      const resultsPromise = ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: prompt,
+        contents: `Search the Qur'an and authentic Hadith collections for: "${queryStr}". 
+        
+        RANKING & AUTHENTICITY RULES:
+        1. Rank results by absolute relevance to the query.
+        2. ONLY return authentic references.
+        3. MANDATORY: For every result, you MUST provide the FULL and COMPLETE text for 'arabic', 'english', and 'urdu'. 
+        4. NEVER truncate, summarize, or use ellipses ("...") within the sacred text fields.
+        5. Failure to provide the full text is a violation of data integrity.
+        
+        Return EXACTLY 5 highly relevant entries as a JSON array. Include Surah/Ayah and Book/Number.`,
         config: { 
           responseMimeType: "application/json",
           responseSchema: {
@@ -350,25 +375,75 @@ export default function App() {
                 surahName: { type: Type.STRING },
                 surahNumber: { type: Type.NUMBER },
                 ayahNumber: { type: Type.NUMBER },
-                hadithNumber: { type: Type.STRING },
-                relevanceScore: { type: Type.NUMBER }
+                hadithNumber: { type: Type.STRING }
               },
               required: ["type", "id", "reference", "arabic", "english", "urdu"]
             }
           }
         }
       });
-      
-      const results: SearchItem[] = JSON.parse(response.text).map((item: any) => ({
+
+      // 2. Fetch Guidance in parallel
+      const guidancePromise = getGuidance(queryStr, state.language);
+
+      // 3. Handle results as soon as they arrive
+      const searchResponse = await resultsPromise;
+      if (currentSearchId !== latestSearchIdRef.current) return;
+
+      const results: SearchItem[] = JSON.parse(searchResponse.text).map((item: any) => ({
         ...item,
         type: item.type?.toLowerCase() === 'verse' ? 'verse' : 'hadith'
       }));
+
       setSearchResults(results || []);
+      setIsLoadingSearch(false); // Stop main loading state early!
+
+      // 4. Handle guidance when it arrives
+      const guidance = await guidancePromise;
+      if (currentSearchId !== latestSearchIdRef.current) return;
+      setSearchGuidance(guidance);
+      
+      // Update cache
+      setSearchCache(prev => ({
+        ...prev,
+        [queryStr]: { guidance, results }
+      }));
+
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : "Search failed.");
-    } finally {
       setIsLoadingSearch(false);
     }
+  };
+
+  const handleSearchInputChange = (val: string) => {
+    setInputValue(val);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (!val.trim()) {
+      setIsSearchActive(false);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(val.trim());
+      addToHistory(val.trim());
+    }, 300); // 300ms debounce
+  };
+
+  const handleSearch = (queryStr: string) => {
+    if (!queryStr.trim()) return;
+    setInputValue(queryStr);
+    setSearchQuery(queryStr);
+    addToHistory(queryStr);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    performSearch(queryStr);
   };
 
   const fetchSimilarItems = async (item: Hadith | QuranVerse) => {
@@ -425,6 +500,7 @@ export default function App() {
       view,
       ...payload
     }));
+    // We don't reset isSearchActive here to allow returning to search results from detail views
     if (view === 'hadithDetail' || view === 'verseDetail') {
       setCurrentExplanation(undefined);
       if (payload?.selectedHadith) fetchSimilarItems(payload.selectedHadith);
@@ -441,10 +517,10 @@ export default function App() {
           ayahNumber: item.ayahNumber || 1,
           surahName: item.surahName || '',
           surahNameArabic: '',
-          arabicText: item.arabic,
-          englishTranslation: item.english,
-          urduTranslation: item.urdu,
-          reference: item.reference,
+          arabicText: item.arabic || '',
+          englishTranslation: item.english || '',
+          urduTranslation: item.urdu || '',
+          reference: item.reference || 'Quran Reference',
           tags: []
         }
       });
@@ -455,10 +531,10 @@ export default function App() {
           bookId: item.bookId || 'bukhari',
           chapterId: 'search',
           hadithNumber: item.hadithNumber || '1',
-          arabicText: item.arabic,
-          englishTranslation: item.english,
-          urduTranslation: item.urdu,
-          reference: item.reference,
+          arabicText: item.arabic || '',
+          englishTranslation: item.english || '',
+          urduTranslation: item.urdu || '',
+          reference: item.reference || 'Hadith Reference',
           tags: [],
           authenticity: 'Sahih'
         }
@@ -509,7 +585,11 @@ export default function App() {
         onOpenSettings={() => setShowSettings(true)}
         onOpenBookmarks={() => setShowBookmarks(true)}
         onSearch={handleSearch}
-        onHome={() => navigateTo('home')}
+        onHome={() => {
+          setInputValue('');
+          setIsSearchActive(false);
+          navigateTo('home');
+        }}
         streak={streak}
       />
 
@@ -548,18 +628,68 @@ export default function App() {
                     <div className="absolute -inset-1 bg-gradient-to-r from-islamic-green/10 via-islamic-gold/5 to-islamic-green/10 rounded-2xl blur-md opacity-0 group-focus-within:opacity-100 transition duration-700"></div>
                     <input 
                       type="text"
-                      placeholder="Ask for guidance... e.g. feeling unmotivated, finding peace"
+                      placeholder="Ask about spiritual matters, feelings, or Islamic concepts..."
+                      value={inputValue}
+                      onChange={(e) => handleSearchInputChange(e.target.value)}
+                      onFocus={() => setIsInputFocused(true)}
+                      onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
                       className="relative w-full h-14 pl-14 pr-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 transition-all text-[16px] shadow-premium outline-none text-slate-800 dark:text-white focus:ring-[8px] focus:ring-islamic-green/5 focus:border-islamic-green/30 placeholder:text-slate-300"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          handleSearch((e.target as HTMLInputElement).value);
+                          handleSearch(inputValue);
                         }
                       }}
                     />
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-islamic-green transition-colors" />
+                    <AnimatePresence>
+                      {inputValue && (
+                        <motion.button
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          onClick={() => {
+                            setInputValue('');
+                            setIsSearchActive(false);
+                          }}
+                          className="absolute right-14 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
                     <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-2">
                        <Sparkles className="w-4 h-4 text-islamic-gold opacity-30 pointer-events-none animate-pulse" />
                     </div>
+
+                    {/* Live Suggestions Dropdown */}
+                    <AnimatePresence>
+                      {isInputFocused && filteredSuggestions.length > 0 && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-white/5 shadow-2xl z-50 overflow-hidden"
+                        >
+                          {filteredSuggestions.map((suggestion, idx) => (
+                            <motion.button
+                              key={idx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.05 }}
+                              onClick={() => {
+                                setInputValue(suggestion);
+                                handleSearch(suggestion);
+                              }}
+                              className="w-full px-6 py-3.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-3 transition-colors border-b last:border-0 border-slate-50 dark:border-white/5"
+                            >
+                              <Search className="w-4 h-4 text-slate-300" />
+                              <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{suggestion}</span>
+                              <div className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] font-bold text-islamic-green uppercase tracking-widest">Seek</div>
+                            </motion.button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <motion.div 
@@ -600,29 +730,66 @@ export default function App() {
                 </motion.div>
               </div>
 
-              <div className="max-w-5xl mx-auto pb-40">
+               <div className="max-w-5xl mx-auto pb-40">
+                <AnimatePresence>
+                  {isSearchActive && (
+                    <motion.div
+                      key="search-content"
+                      initial={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                      animate={{ opacity: 1, height: 'auto', overflow: 'visible' }}
+                      exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                      className="pt-12"
+                    >
+                      {isLoadingSearch ? (
+                        <SearchSkeleton />
+                      ) : (
+                        <SearchResults 
+                          query={inputValue}
+                          results={searchResults}
+                          guidance={searchGuidance}
+                          isLoading={false}
+                          onSelectResult={handleSelectSearchResult}
+                          onBack={() => setIsSearchActive(false)}
+                          onSearch={handleSearch}
+                          error={searchError}
+                          searchHistory={searchHistory}
+                        />
+                      )}
+                      <div className="h-24" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="flex items-center gap-6 mb-12 px-6"
+                  layout
+                  className="space-y-12"
                 >
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
-                  <div className="flex flex-col items-center">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Heavenly Insight</span>
-                    <Sparkles className="w-3 h-3 text-islamic-gold mt-2 opacity-30" />
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex items-center gap-6 px-6"
+                  >
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em]">Heavenly Insight</span>
+                      <Sparkles className="w-3 h-3 text-islamic-gold mt-2 opacity-30" />
+                    </div>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
+                  </motion.div>
+                  <div className="px-4">
+                    <DailyAyahCard 
+                      verse={ayahOfTheDay}
+                      reflection={dailyReflection}
+                      isBookmarked={bookmarks.some(b => b.id === ayahOfTheDay.id)}
+                      onToggleBookmark={() => toggleBookmark(ayahOfTheDay, 'verse')}
+                      onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
+                    />
                   </div>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 dark:via-white/10 to-transparent" />
                 </motion.div>
-                <div className="px-4">
-                  <DailyAyahCard 
-                    verse={ayahOfTheDay}
-                    reflection={dailyReflection}
-                    isBookmarked={bookmarks.some(b => b.id === ayahOfTheDay.id)}
-                    onToggleBookmark={() => toggleBookmark(ayahOfTheDay, 'verse')}
-                    onViewDetail={() => navigateTo('verseDetail', { selectedVerse: ayahOfTheDay })}
-                  />
-                </div>
               </div>
             </motion.section>
           )}
@@ -635,16 +802,7 @@ export default function App() {
               exit={{ opacity: 0, y: -20 }}
               className="w-full pt-24"
             >
-              <SearchResults 
-                query={searchQuery}
-                results={searchResults}
-                guidance={searchGuidance}
-                isLoading={isLoadingSearch}
-                onSelectResult={handleSelectSearchResult}
-                onBack={() => navigateTo('home')}
-                onSearch={handleSearch}
-                error={searchError}
-              />
+              {/* This view is deprecated in favor of inline search, but kept for legacy detail routing if needed */}
             </motion.section>
           )}
 

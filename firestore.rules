@@ -36,17 +36,16 @@ service cloud.firestore {
     // --- Bookmarks ---
     match /users/{userId}/bookmarks/{bookmarkId} {
       function isValidBookmark(data) {
-        return data.keys().hasAll(['userId', 'itemId', 'itemType', 'itemData', 'savedAt']) &&
-               data.userId == request.auth.uid &&
-               data.itemType in ['hadith', 'verse'] &&
-               data.savedAt == request.time;
+        return data.keys().hasAll(['id', 'type', 'data', 'savedAt']) &&
+               data.type in ['hadith', 'verse'] &&
+               data.id == bookmarkId;
       }
 
       allow list: if isOwner(userId);
       allow get: if isOwner(userId);
       allow create: if isOwner(userId) && isValidBookmark(incoming());
       allow update: if isOwner(userId) && (
-        incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'collectionId'])
+        incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'savedAt'])
       );
       allow delete: if isOwner(userId);
     }

@@ -111,11 +111,11 @@ export const BookmarkList: React.FC<BookmarkListProps> = ({
                 </div>
 
                 <p className="arabic-text line-clamp-1 mb-2">
-                  {b.data.arabicText}
+                  {b.data?.arabicText || 'Text unavailable'}
                 </p>
 
                 <p className="translation-text line-clamp-2 mb-4">
-                  "{b.data.englishTranslation}"
+                  "{b.data?.englishTranslation || 'Translation unavailable'}"
                 </p>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
